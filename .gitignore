@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+
+.env
+.env*.local
+
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+*.pem
+npm-debug.log*
+
+# 배경 이미지 원본(작업용). 배포본은 public/office.jpg
+dhub-img.jpg

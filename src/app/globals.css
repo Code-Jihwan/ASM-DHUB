@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/**
+ * 디자인 토큰. DHUB-design 시안에서 뽑았다.
+ * 시안이 라이트 전용이라 다크 모드 분기는 두지 않는다.
+ */
+@theme inline {
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI",
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+  /* 페이지 배경과 좌석도 안쪽 바닥. neutral-50(#fafafa)보다 살짝 푸르다. */
+  --color-canvas: #f8f9fa;
+  --color-floor: #fbfbfc;
+}
+
+html {
+  font-family: var(--font-sans);
+  /* iOS에서 가로 스크롤 영역을 넘길 때 글자 크기가 튀지 않게 */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 좌석도·시간 그리드처럼 스스로 스크롤되는 영역의 스크롤바를 얇게 */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) transparent;
+}
+
+/* 모바일 하단 탭바가 홈 인디케이터에 가리지 않게 */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
