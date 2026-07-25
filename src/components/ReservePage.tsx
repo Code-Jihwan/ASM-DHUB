@@ -19,7 +19,7 @@ import {
 } from "@/lib/policy";
 import type { Occupancy, Reservation, Seat, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
-import { ReservationPanel } from "./ReservationPanel";
+import { OccupancyPanel, ReservationPanel } from "./ReservationPanel";
 import { MyReservationCard } from "./MyReservationCard";
 import { ReportDialog } from "./ReportDialog";
 
@@ -207,6 +207,17 @@ export function ReservePage({ seats, userId }: Props) {
 
   const { occupiedNow, maxMin } = seatCap(selected);
   const effectiveDuration = Math.min(durationMin, maxMin);
+
+  // 사용 중인 좌석을 눌렀을 때 우측에 띄울 예약 정보(지금 그 자리를 덮고 있는 예약).
+  const coveringRow =
+    selected !== null && now
+      ? rows.find(
+          (r) =>
+            r.seatId === selected &&
+            r.start.getTime() <= now.getTime() &&
+            r.end.getTime() > now.getTime(),
+        )
+      : undefined;
 
   // 좌석도가 비었는지 판정할 구간. 좌석을 고르면 그 이용 구간, 아니면 durationMin 기준.
   const windowLen = selected !== null ? Math.max(effectiveDuration, POLICY.slotMinutes) : durationMin;
@@ -490,7 +501,27 @@ export function ReservePage({ seats, userId }: Props) {
           </div>
         </section>
 
-        {booking ? (
+        {!booking ? (
+          <MyReservationCard
+            reservation={mine!}
+            seat={seats.find((s) => s.id === mine!.seat_id)}
+            now={now}
+            onExtend={extend}
+            onCancel={cancel}
+            onChange={startChange}
+            onAway={setAway}
+            busy={busy}
+          />
+        ) : chosen && coveringRow ? (
+          <OccupancyPanel
+            seat={chosen}
+            name={coveringRow.name}
+            start={coveringRow.start}
+            end={coveringRow.end}
+            awayMin={coveringRow.awaySince ? awayMinutes(coveringRow.awaySince, now) : null}
+            now={now}
+          />
+        ) : (
           <ReservationPanel
             seat={chosen}
             now={now}
@@ -501,17 +532,6 @@ export function ReservePage({ seats, userId }: Props) {
             busy={busy}
             mode={changing ? "change" : "book"}
             locked={panelLocked}
-          />
-        ) : (
-          <MyReservationCard
-            reservation={mine!}
-            seat={seats.find((s) => s.id === mine!.seat_id)}
-            now={now}
-            onExtend={extend}
-            onCancel={cancel}
-            onChange={startChange}
-            onAway={setAway}
-            busy={busy}
           />
         )}
       </div>

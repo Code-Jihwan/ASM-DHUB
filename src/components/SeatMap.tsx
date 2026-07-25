@@ -39,11 +39,12 @@ function tileClass(s: SeatView, selected: boolean, clickable: boolean, away: boo
   }
   // 자리비움이면 시간과 무관하게 주황색. 남이 볼 때 "잠깐 비운 자리"임을 바로 알린다.
   if (away) {
-    return `${TILE} cursor-not-allowed border-amber-400 bg-amber-100 text-amber-900`;
+    return `${TILE} border-amber-400 bg-amber-100 text-amber-900 ${clickable ? "cursor-pointer hover:border-amber-500" : "cursor-not-allowed"}`;
   }
   // 남이 사용 중인 자리. 못 앉는 자리임이 바로 보이게 소프트 레드로 칠한다.
+  // 눌러서 예약 정보를 볼 수 있다.
   if (s.busy) {
-    return `${TILE} cursor-not-allowed border-rose-200 bg-rose-100 text-rose-700`;
+    return `${TILE} border-rose-200 bg-rose-100 text-rose-700 ${clickable ? "cursor-pointer hover:border-rose-400" : "cursor-not-allowed"}`;
   }
   return (
     `${TILE} border-neutral-300 bg-white text-neutral-700 ` +
@@ -98,8 +99,8 @@ export function SeatMap({
                     const away = s.awaySince ? awayMinutes(s.awaySince, now) : null;
                     const isAway = away !== null;
                     const isSelected = selected === s.id;
-                    const clickable =
-                      s.active && !disabled && (anySelectable || (!s.busy && !s.mine));
+                    // 빈 자리는 예약하러, 사용 중인 자리는 예약 정보를 보러 누른다. 내 자리는 제외.
+                    const clickable = s.active && !disabled && (anySelectable || !s.mine);
 
                     const state = !s.active
                       ? "사용 불가"

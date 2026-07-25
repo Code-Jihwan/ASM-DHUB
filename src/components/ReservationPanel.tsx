@@ -1,7 +1,15 @@
 "use client";
 
-import { Clock, Info, Minus, MonitorDot, Plus } from "lucide-react";
-import { addMinutes, DURATION_PRESETS, floorMinute, fmtMinutes, fmtTime, POLICY } from "@/lib/policy";
+import { CalendarDays, Clock, Coffee, Info, Minus, MonitorDot, Plus, UserRound } from "lucide-react";
+import {
+  addMinutes,
+  DURATION_PRESETS,
+  floorMinute,
+  fmtDate,
+  fmtMinutes,
+  fmtTime,
+  POLICY,
+} from "@/lib/policy";
 import type { Seat } from "@/lib/types";
 
 type Props = {
@@ -195,6 +203,117 @@ export function ReservationPanel({
         >
           {busy ? "처리 중…" : mode === "change" ? "이 자리로 변경하기" : "예약 확정하기"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+type OccupancyPanelProps = {
+  seat: Seat;
+  /** 그 자리를 쓰고 있는 사람 이름 */
+  name: string | null;
+  start: Date;
+  end: Date;
+  /** 자리비움 경과 분. 자리비움이 아니면 null */
+  awayMin: number | null;
+  now: Date;
+};
+
+/**
+ * 사용 중인 좌석을 눌렀을 때 우측에 뜨는 읽기 전용 정보 패널.
+ * 좌석 번호 · 예약자 · 이용 시간(언제부터 언제까지)을 보여 준다. 예약은 못 한다.
+ */
+export function OccupancyPanel({ seat, name, start, end, awayMin, now }: OccupancyPanelProps) {
+  const running = now >= start && now < end;
+  const minsLeft = Math.max(0, Math.round((end.getTime() - now.getTime()) / 60000));
+  const isAway = awayMin !== null;
+
+  return (
+    <div className={PANEL}>
+      <div
+        className={
+          "shrink-0 border-b p-6 " +
+          (isAway
+            ? "border-amber-100 bg-gradient-to-b from-amber-50 to-white"
+            : "border-rose-100 bg-gradient-to-b from-rose-50 to-white")
+        }
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-[42px] font-black leading-none tracking-tight text-neutral-900 tabular-nums">
+            {seat.label}
+          </h3>
+          <span
+            className={
+              "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold " +
+              (isAway
+                ? "border-amber-200 bg-amber-100 text-amber-800"
+                : "border-rose-200 bg-rose-100 text-rose-700")
+            }
+          >
+            {isAway ? "자리비움" : running ? "사용 중" : "예약됨"}
+          </span>
+        </div>
+      </div>
+
+      <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-6">
+        <dl className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
+              <UserRound className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <dt className="text-[11px] font-bold text-neutral-400">예약자</dt>
+              <dd className="truncate text-[15px] font-black text-neutral-900">
+                {name ?? "예약자"}
+              </dd>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <dt className="text-[11px] font-bold text-neutral-400">이용 시간</dt>
+              <dd className="text-[15px] font-black tabular-nums text-neutral-900">
+                {fmtTime(start)} – {fmtTime(end)}
+              </dd>
+              <dd className="text-[11px] font-bold text-neutral-400">{fmtDate(start)}</dd>
+            </div>
+          </div>
+
+          {running && (
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
+                <Clock className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <dt className="text-[11px] font-bold text-neutral-400">종료까지</dt>
+                <dd className="text-[15px] font-black text-neutral-900">
+                  {fmtMinutes(minsLeft)} 남음
+                </dd>
+              </div>
+            </div>
+          )}
+
+          {isAway && (
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                <Coffee className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <dt className="text-[11px] font-bold text-neutral-400">자리비움</dt>
+                <dd className="text-[15px] font-black text-amber-800">{fmtMinutes(awayMin)} 경과</dd>
+              </div>
+            </div>
+          )}
+        </dl>
+      </div>
+
+      <div className="shrink-0 border-t border-neutral-100 px-6 pb-6 pt-5">
+        <p className="rounded-xl border border-neutral-100 bg-neutral-50 p-3.5 text-[11px] font-medium leading-relaxed text-neutral-500">
+          이 자리는 지금 사용 중이라 예약할 수 없습니다. 비어 있는 자리를 골라 주세요.
+        </p>
       </div>
     </div>
   );
