@@ -15,6 +15,7 @@ import {
   parseRange,
   POLICY,
   toRange,
+  withinBookingHours,
 } from "@/lib/policy";
 import type { Occupancy, Reservation, Seat, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
@@ -375,9 +376,14 @@ export function ReservePage({ seats, userId }: Props) {
   const freeCount = view.filter((s) => s.active && !s.busy).length;
   const mineRange = mine ? parseRange(mine.period) : null;
 
+  // 지금이 운영 시간(08~20시) 밖이면 예약 자체를 받지 않는다. 그 외 시간은 자율 이용.
+  const outsideHours = booking && !withinBookingHours(now);
+  const hoursText = `예약은 ${String(POLICY.displayOpenHour).padStart(2, "0")}–${String(POLICY.displayCloseHour).padStart(2, "0")}시에만 가능합니다. 그 외 시간은 예약 없이 자유롭게 이용하세요.`;
+
   // 고른 좌석을 지금 예약할 수 없는 경우의 안내 문구.
-  const panelLocked =
-    selected === null
+  const panelLocked = outsideHours
+    ? hoursText
+    : selected === null
       ? null
       : occupiedNow
         ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
@@ -440,6 +446,13 @@ export function ReservePage({ seats, userId }: Props) {
         </div>
       )}
 
+      {outsideHours && (
+        <div className="mb-4 flex shrink-0 items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-bold text-amber-800">
+          <Clock className="h-4 w-4 shrink-0" />
+          지금은 예약 시간이 아닙니다. {hoursText}
+        </div>
+      )}
+
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:gap-6 lg:flex-row">
         {/* min-w-0이 없으면 좌석도의 min-width가 섹션을 부풀려 우측 패널을 화면 밖으로 민다. */}
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm md:p-6">
@@ -472,7 +485,7 @@ export function ReservePage({ seats, userId }: Props) {
               selected={selected}
               onSelect={chooseSeat}
               now={now}
-              disabled={busy || !booking}
+              disabled={busy || !booking || outsideHours}
             />
           </div>
         </section>

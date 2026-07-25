@@ -36,6 +36,7 @@ export const DURATION_PRESETS = [30, 60, 90, 120] as const;
 export const TZ = "Asia/Seoul";
 
 const MS = { min: 60_000, hour: 3_600_000 } as const;
+const OPEN_MIN = POLICY.openHour * 60;
 const CLOSE_MIN = POLICY.closeHour * 60;
 
 /** 자정 기준 경과 분(KST). 브라우저 시간대와 무관하게 한국 시각으로 판단한다. */
@@ -74,11 +75,18 @@ function floorUnit(minutes: number): number {
   return Math.max(0, Math.floor(minutes / POLICY.slotMinutes) * POLICY.slotMinutes);
 }
 
+/** 지금이 예약 가능한 운영 시간(open~close) 안인가. 밖이면 예약을 받지 않는다. */
+export function withinBookingHours(now: Date): boolean {
+  const m = kstMinutes(now);
+  return m >= OPEN_MIN && m < CLOSE_MIN;
+}
+
 /**
  * start(=지금)에 대해 예약 가능한 최대 이용 시간(분).
- * 정책 상한(maxBaseHours)과 운영 종료까지 남은 시간 중 작은 값을 10분 단위로 내린다.
+ * 운영 시간 밖이면 0(예약 불가). 안이면 정책 상한과 마감까지 남은 시간 중 작은 값을 10분 단위로 내린다.
  */
 export function maxDurationMinutes(start: Date): number {
+  if (!withinBookingHours(start)) return 0;
   return floorUnit(Math.min(POLICY.maxBaseHours * 60, minutesUntilClose(start)));
 }
 
