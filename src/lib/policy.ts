@@ -27,6 +27,8 @@ export const POLICY = {
   // 화면에 표기하는 운영 시간(항상 08~20). "예약 08–20시" 안내에 쓴다.
   displayOpenHour: REAL_OPEN,
   displayCloseHour: REAL_CLOSE,
+  // 오픈 직전 이 시간 안(예: 07:30~08:00)에 오면 시작 시각을 오픈(08:00)으로 당겨 예약을 받는다.
+  earlyGraceMinutes: 30,
   awayLimitMinutes: 20, // 자리비움 후 이 시간 안에 복귀하지 않으면 예약이 자동 취소된다.
 } as const;
 
@@ -79,6 +81,21 @@ function floorUnit(minutes: number): number {
 export function withinBookingHours(now: Date): boolean {
   const m = kstMinutes(now);
   return m >= OPEN_MIN && m < CLOSE_MIN;
+}
+
+/**
+ * 지금 예약을 걸 때의 시작 시각.
+ *  - 운영 시간(08~20) 안: 지금 이 분.
+ *  - 오픈 직전 유예(07:30~08:00): 오픈 시각(08:00)으로 당겨 준다.
+ *  - 그 외(너무 이른 새벽 / 마감 후): null → 예약 불가.
+ */
+export function bookingStart(now: Date): Date | null {
+  const m = kstMinutes(now);
+  if (m >= OPEN_MIN && m < CLOSE_MIN) return floorMinute(now);
+  if (m >= OPEN_MIN - POLICY.earlyGraceMinutes && m < OPEN_MIN) {
+    return addMinutes(floorMinute(now), OPEN_MIN - m); // 오늘 08:00 정각
+  }
+  return null;
 }
 
 /**

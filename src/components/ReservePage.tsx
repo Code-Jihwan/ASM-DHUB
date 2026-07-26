@@ -9,13 +9,12 @@ import { useNow } from "@/lib/useNow";
 import {
   addMinutes,
   awayMinutes,
-  floorMinute,
+  bookingStart,
   fmtTime,
   maxDurationMinutes,
   parseRange,
   POLICY,
   toRange,
-  withinBookingHours,
 } from "@/lib/policy";
 import type { Occupancy, Reservation, Seat, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
@@ -100,7 +99,7 @@ export function ReservePage({ seats, userId }: Props) {
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   // 예약 시작은 늘 "지금 이 분". 최대 이용 시간(2h) 앞의 예약만 알면 충분하다.
-  const startBase = now ? floorMinute(now) : null;
+  const startBase = now ? bookingStart(now) : null;
   const winTo = startBase ? addMinutes(startBase, POLICY.maxBaseHours * 60) : null;
 
   // now는 30초마다 새 객체가 되지만 창의 경계는 1분에 한 번만 움직인다.
@@ -278,9 +277,14 @@ export function ReservePage({ seats, userId }: Props) {
     setBusy(true);
     setError(null);
 
-    // 시작은 제출 시점의 현재 분으로 다시 잡는다. 렌더 사이에 분이 넘어가면
-    // 지난 시간으로 판정돼 DB가 거부하기 때문이다.
-    const start = floorMinute(new Date());
+    // 시작은 제출 시점 기준으로 다시 잡는다(렌더 사이 분이 넘어가면 지난 시간으로 거부됨).
+    // 오픈 직전 유예 시간이면 08:00으로 당겨진다.
+    const start = bookingStart(new Date());
+    if (!start) {
+      setBusy(false);
+      setError("지금은 예약할 수 있는 시간이 아닙니다.");
+      return;
+    }
     const end = addMinutes(start, effectiveDuration);
 
     const { error } = changing
@@ -388,7 +392,7 @@ export function ReservePage({ seats, userId }: Props) {
   const mineRange = mine ? parseRange(mine.period) : null;
 
   // 지금이 운영 시간(08~20시) 밖이면 예약 자체를 받지 않는다. 그 외 시간은 자율 이용.
-  const outsideHours = booking && !withinBookingHours(now);
+  const outsideHours = booking && startBase === null;
   const hoursText = `예약은 ${String(POLICY.displayOpenHour).padStart(2, "0")}–${String(POLICY.displayCloseHour).padStart(2, "0")}시에만 가능합니다. 그 외 시간은 예약 없이 자유롭게 이용하세요.`;
 
   // 고른 좌석을 지금 예약할 수 없는 경우의 안내 문구.

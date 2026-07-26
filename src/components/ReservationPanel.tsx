@@ -3,6 +3,7 @@
 import { CalendarDays, Clock, Coffee, Info, Minus, MonitorDot, Plus, UserRound } from "lucide-react";
 import {
   addMinutes,
+  bookingStart,
   DURATION_PRESETS,
   floorMinute,
   fmtDate,
@@ -91,7 +92,9 @@ export function ReservationPanel({
     return <PanelMessage title={`${seat.label}번 자리`} body={locked} tone="emerald" />;
   }
 
-  const start = floorMinute(now);
+  // 오픈 직전 유예 시간이면 시작이 08:00으로 당겨진다. 예약 불가 시각이면 패널이 잠겨 여기 안 온다.
+  const start = bookingStart(now) ?? floorMinute(now);
+  const graceApplied = start.getTime() > floorMinute(now).getTime();
   const step = POLICY.slotMinutes;
 
   const presets = DURATION_PRESETS.filter((m) => m <= maxMin);
@@ -116,13 +119,22 @@ export function ReservationPanel({
       </div>
 
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        {/* 시작: 지금 고정 */}
-        <div className="mb-5 flex items-center justify-between rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm font-bold text-neutral-500">
-            <Clock className="h-4 w-4 text-neutral-400" />
-            시작 시간
-          </span>
-          <span className="text-base font-black tabular-nums text-neutral-900">{fmtTime(start)}</span>
+        {/* 시작 시각. 지금이 원칙이지만, 오픈 직전이면 08:00으로 당겨진다. */}
+        <div className="mb-5 rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm font-bold text-neutral-500">
+              <Clock className="h-4 w-4 text-neutral-400" />
+              시작 시간
+            </span>
+            <span className="text-base font-black tabular-nums text-neutral-900">
+              {fmtTime(start)}
+            </span>
+          </div>
+          {graceApplied && (
+            <p className="mt-1.5 text-[11px] font-bold text-neutral-400">
+              운영 시작 전이라 {fmtTime(start)}부터로 맞췄습니다.
+            </p>
+          )}
         </div>
 
         <p className="mb-2 text-xs font-bold text-neutral-500">얼마나 쓰실 건가요?</p>
@@ -181,7 +193,7 @@ export function ReservationPanel({
         <div className="mb-4 flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-50 p-3.5">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
           <p className="text-[11px] font-medium leading-relaxed text-neutral-500">
-            {seat.label}번 자리를 지금 {fmtTime(start)}부터 <b className="font-bold text-neutral-700">{fmtTime(end)}</b>까지
+            {seat.label}번 자리를 {fmtTime(start)}부터 <b className="font-bold text-neutral-700">{fmtTime(end)}</b>까지
             사용합니다. 종료 {POLICY.extendWindowHours}시간 전부터 최대 {POLICY.maxExtendHours}시간 한 번 연장할 수 있습니다.
           </p>
         </div>
