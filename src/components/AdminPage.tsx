@@ -104,8 +104,14 @@ export function AdminPage({ seats, userId }: Props) {
     fetchReports().then((rows) => {
       if (!cancelled) setReports(rows);
     });
-    supabase.rpc("admin_list_profiles").then(({ data }) => {
-      if (!cancelled) setUsers((data ?? []) as AdminUser[]);
+    supabase.rpc("admin_list_profiles").then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setError(humanizeDbError(error));
+        setUsers([]);
+        return;
+      }
+      setUsers((data ?? []) as AdminUser[]);
     });
     return () => {
       cancelled = true;
