@@ -439,12 +439,17 @@ export function ReservePage({ seats, userId }: Props) {
           icon={Clock}
           value={
             mineRange ? (
-              <div className="flex items-center gap-2.5">
-                <div className="rounded-[8px] bg-white/15 px-2.5 py-1 text-[15px] font-black leading-none tabular-nums">
-                  {seats.find((s) => s.id === mine!.seat_id)?.label ?? mine!.seat_id}
-                </div>
-                <span className="text-[20px] font-black tabular-nums">
-                  {fmtTime(mineRange.start)} - {fmtTime(mineRange.end)}
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-baseline gap-0.5 rounded-[10px] bg-white/15 px-2.5 py-1.5 leading-none tabular-nums">
+                  <span className="text-[16px] font-black">
+                    {seats.find((s) => s.id === mine!.seat_id)?.label ?? mine!.seat_id}
+                  </span>
+                  <span className="text-[11px] font-bold text-white/60">번</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-white/10 px-3 py-1.5 text-[17px] font-black leading-none tabular-nums">
+                  {fmtTime(mineRange.start)}
+                  <span className="text-white/40">–</span>
+                  {fmtTime(mineRange.end)}
                 </span>
               </div>
             ) : (
