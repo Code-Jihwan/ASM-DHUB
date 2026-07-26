@@ -98,6 +98,8 @@ export function ReservePage({ seats, userId }: Props) {
   // enforced: CENTER_IPS가 설정돼 제한이 켜졌는지(꺼져 있으면 상태 pill을 숨긴다).
   const [onWifi, setOnWifi] = useState<boolean | null>(null);
   const [wifiEnforced, setWifiEnforced] = useState(false);
+  // 재예약 쿨다운이 끝나는 시각. null이면 쿨다운 없음.
+  const [cooldownUntil, setCooldownUntil] = useState<Date | null>(null);
   // 이미 자동 취소한 예약 id. 갱신 전 중복 호출을 막는다.
   const autoCancelledRef = useRef<Set<string>>(new Set());
 
@@ -157,8 +159,16 @@ export function ReservePage({ seats, userId }: Props) {
       .limit(50)
       .then(({ data }) => {
         if (cancelled) return;
-        const live = (data ?? []).find((r) => parseRange(r.period as string).end > new Date());
-        setMine((live as Reservation) ?? null);
+        const rows = (data ?? []) as Reservation[];
+        const nowT = Date.now();
+        const live = rows.find((r) => parseRange(r.period).end.getTime() > nowT);
+        setMine(live ?? null);
+        // 재예약 쿨다운: 취소하지 않고 끝난 예약 중 가장 최근 종료 시각 + 쿨다운.
+        const endedMs = rows
+          .map((r) => parseRange(r.period).end.getTime())
+          .filter((t) => t <= nowT);
+        const lastEnd = endedMs.length ? Math.max(...endedMs) : null;
+        setCooldownUntil(lastEnd ? new Date(lastEnd + POLICY.cooldownMinutes * 60_000) : null);
       });
     return () => {
       cancelled = true;
@@ -417,20 +427,27 @@ export function ReservePage({ seats, userId }: Props) {
   const outsideHours = booking && startBase === null;
   const hoursText = `예약은 ${String(POLICY.displayOpenHour).padStart(2, "0")}–${String(POLICY.displayCloseHour).padStart(2, "0")}시에만 가능합니다. 그 외 시간은 예약 없이 자유롭게 이용하세요.`;
 
-  const blocked = wifiBlocked || outsideHours;
+  // 재예약 쿨다운: 직전 예약이 끝난 뒤 cooldownMinutes 안이면 막는다.
+  const cooldownActive = booking && cooldownUntil !== null && now < cooldownUntil;
+  const cooldownLeft = cooldownActive ? Math.max(1, Math.ceil((cooldownUntil!.getTime() - now.getTime()) / 60_000)) : 0;
+  const cooldownText = `예약이 끝난 뒤 ${POLICY.cooldownMinutes}분간은 다시 예약할 수 없습니다. ${cooldownUntil ? fmtTime(cooldownUntil) : ""}부터 가능합니다.`;
+
+  const blocked = wifiBlocked || outsideHours || cooldownActive;
 
   // 고른 좌석을 지금 예약할 수 없는 경우의 안내 문구.
   const panelLocked = wifiBlocked
     ? wifiText
-    : outsideHours
-      ? hoursText
-      : selected === null
-        ? null
-        : occupiedNow
-          ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
-          : maxMin < POLICY.slotMinutes
-            ? "지금 이 자리는 남은 시간이 없습니다. 다른 자리를 고르거나 잠시 뒤 다시 시도하세요."
-            : null;
+    : cooldownActive
+      ? cooldownText
+      : outsideHours
+        ? hoursText
+        : selected === null
+          ? null
+          : occupiedNow
+            ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
+            : maxMin < POLICY.slotMinutes
+              ? "지금 이 자리는 남은 시간이 없습니다. 다른 자리를 고르거나 잠시 뒤 다시 시도하세요."
+              : null;
 
   return (
     <>
@@ -508,7 +525,14 @@ export function ReservePage({ seats, userId }: Props) {
         </div>
       )}
 
-      {!wifiBlocked && outsideHours && (
+      {!wifiBlocked && cooldownActive && (
+        <div className="mb-4 flex shrink-0 items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-bold text-amber-800">
+          <Clock className="h-4 w-4 shrink-0" />
+          예약이 끝났습니다. {cooldownUntil ? fmtTime(cooldownUntil) : ""}부터 다시 예약할 수 있어요 (약 {cooldownLeft}분 남음).
+        </div>
+      )}
+
+      {!wifiBlocked && !cooldownActive && outsideHours && (
         <div className="mb-4 flex shrink-0 items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-bold text-amber-800">
           <Clock className="h-4 w-4 shrink-0" />
           지금은 예약 시간이 아닙니다. {hoursText}

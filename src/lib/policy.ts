@@ -30,6 +30,7 @@ export const POLICY = {
   // 오픈 직전 이 시간 안(예: 07:30~08:00)에 오면 시작 시각을 오픈(08:00)으로 당겨 예약을 받는다.
   earlyGraceMinutes: 30,
   awayLimitMinutes: 20, // 자리비움 후 이 시간 안에 복귀하지 않으면 예약이 자동 취소된다.
+  cooldownMinutes: 20, // 예약 종료 후 이 시간 동안은 재예약 불가. DB policy.cooldown()과 짝을 이룬다.
 } as const;
 
 /** 이용 시간 빠른 선택 버튼(분). 운영 종료·정책 상한을 넘는 값은 화면에서 걸러 낸다. */
