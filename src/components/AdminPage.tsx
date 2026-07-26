@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Search, ShieldCheck, ShieldOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -9,6 +10,15 @@ import type { Occupancy, Seat, SeatHistoryRow, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
 
 type Props = { seats: Seat[]; userId: string };
+
+type AdminUser = {
+  user_id: string;
+  name: string;
+  team: string;
+  is_admin: boolean;
+  email: string;
+  created_at: string;
+};
 
 type Report = {
   id: string;
@@ -63,6 +73,9 @@ export function AdminPage({ seats, userId }: Props) {
   const [occupancy, setOccupancy] = useState<Occupancy[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [reportFilter, setReportFilter] = useState<"all" | Report["kind"]>("all");
+  const [users, setUsers] = useState<AdminUser[] | null>(null);
+  const [userQuery, setUserQuery] = useState("");
+  const [savingUser, setSavingUser] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -91,10 +104,28 @@ export function AdminPage({ seats, userId }: Props) {
     fetchReports().then((rows) => {
       if (!cancelled) setReports(rows);
     });
+    supabase.rpc("admin_list_profiles").then(({ data }) => {
+      if (!cancelled) setUsers((data ?? []) as AdminUser[]);
+    });
     return () => {
       cancelled = true;
     };
-  }, [fetchOccupancy, fetchReports, reloadKey]);
+  }, [fetchOccupancy, fetchReports, supabase, reloadKey]);
+
+  async function toggleAdmin(u: AdminUser) {
+    setSavingUser(u.user_id);
+    setError(null);
+    const { error } = await supabase.rpc("set_admin", {
+      p_user_id: u.user_id,
+      p_is_admin: !u.is_admin,
+    });
+    setSavingUser(null);
+    if (error) {
+      setError(humanizeDbError(error));
+      return;
+    }
+    setReloadKey((k) => k + 1);
+  }
 
   useEffect(() => {
     if (selected === null) return;
@@ -162,6 +193,12 @@ export function AdminPage({ seats, userId }: Props) {
     { key: "facility" as const, label: REPORT_KIND.facility.label },
     { key: "other" as const, label: REPORT_KIND.other.label },
   ];
+
+  const q = userQuery.trim().toLowerCase();
+  const shownUsers = (users ?? []).filter(
+    (u) => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.team.toLowerCase().includes(q),
+  );
+  const adminCount = (users ?? []).filter((u) => u.is_admin).length;
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
@@ -354,6 +391,95 @@ export function AdminPage({ seats, userId }: Props) {
                       </button>
                     )}
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className={CARD}>
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-black tracking-tight text-neutral-900">
+          사용자 · 관리자 권한
+          <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-bold text-neutral-600 tabular-nums">
+            {users === null ? "—" : `${users.length}명`}
+          </span>
+        </h2>
+        <p className="mb-4 text-[13px] font-medium text-neutral-500">
+          로그인한 사용자를 관리자로 지정하거나 해제합니다. 관리자 {adminCount}명.
+        </p>
+
+        <div className="relative mb-4 max-w-sm">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-300" />
+          <input
+            value={userQuery}
+            onChange={(e) => setUserQuery(e.target.value)}
+            placeholder="이름 · 이메일 · 팀 검색"
+            className="w-full rounded-xl border border-neutral-200 bg-white py-2.5 pl-10 pr-4 text-sm font-bold text-neutral-900 outline-none transition-all placeholder:font-medium placeholder:text-neutral-300 focus:border-neutral-900"
+          />
+        </div>
+
+        {users === null ? (
+          <div className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
+        ) : shownUsers.length === 0 ? (
+          <p className={EMPTY}>해당하는 사용자가 없습니다.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {shownUsers.map((u) => {
+              const isMe = u.user_id === userId;
+              return (
+                <li
+                  key={u.user_id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 p-3.5"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-sm font-black text-white">
+                      {u.name.slice(0, 1)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-black text-neutral-900">{u.name}</span>
+                        {u.is_admin && (
+                          <span className="shrink-0 rounded-md bg-neutral-900 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            관리자
+                          </span>
+                        )}
+                        {isMe && (
+                          <span className="shrink-0 rounded-md bg-neutral-100 px-1.5 py-0.5 text-[10px] font-bold text-neutral-500">
+                            나
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-[12px] font-bold text-neutral-400">
+                        {u.team} · {u.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleAdmin(u)}
+                    disabled={savingUser === u.user_id || (isMe && u.is_admin)}
+                    title={isMe && u.is_admin ? "본인 권한은 스스로 해제할 수 없습니다" : undefined}
+                    className={
+                      "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40 " +
+                      (u.is_admin
+                        ? "border border-neutral-200 text-neutral-600 hover:border-red-500 hover:text-red-600"
+                        : "bg-neutral-900 text-white hover:bg-black")
+                    }
+                  >
+                    {u.is_admin ? (
+                      <>
+                        <ShieldOff className="h-3.5 w-3.5" />
+                        관리자 해제
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        관리자 지정
+                      </>
+                    )}
+                  </button>
                 </li>
               );
             })}
