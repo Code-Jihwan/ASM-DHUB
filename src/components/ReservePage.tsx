@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Clock, MessageSquareWarning, Users, Wifi } from "lucide-react";
+import { CheckCircle2, Clock, MessageSquareWarning, Users, Wifi, WifiOff } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { bookSeat, changeSeat } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -94,8 +94,10 @@ export function ReservePage({ seats, userId }: Props) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [changing, setChanging] = useState(false);
   const [reporting, setReporting] = useState(false);
-  // 센터 와이파이 여부. null=확인 중, true=센터, false=아님.
+  // 센터 와이파이 여부. onWifi: null=확인 중 / true=센터 / false=아님.
+  // enforced: CENTER_IPS가 설정돼 제한이 켜졌는지(꺼져 있으면 상태 pill을 숨긴다).
   const [onWifi, setOnWifi] = useState<boolean | null>(null);
+  const [wifiEnforced, setWifiEnforced] = useState(false);
   // 이미 자동 취소한 예약 id. 갱신 전 중복 호출을 막는다.
   const autoCancelledRef = useRef<Set<string>>(new Set());
 
@@ -103,7 +105,10 @@ export function ReservePage({ seats, userId }: Props) {
   const checkWifi = useCallback(() => {
     fetch("/api/wifi", { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => setOnWifi(Boolean(j.allowed)))
+      .then((j) => {
+        setOnWifi(Boolean(j.allowed));
+        setWifiEnforced(Boolean(j.enforced));
+      })
       .catch(() => setOnWifi(null));
   }, []);
 
@@ -521,6 +526,24 @@ export function ReservePage({ seats, userId }: Props) {
                 {String(POLICY.displayOpenHour).padStart(2, "0")}:00–
                 {String(POLICY.displayCloseHour).padStart(2, "0")}:00
               </span>
+              {/* 센터 와이파이 상태. 제한이 켜져 있을 때(CENTER_IPS 설정)만 보인다. */}
+              {wifiEnforced &&
+                (onWifi === false ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-[12px] font-bold text-red-600">
+                    <WifiOff className="h-3.5 w-3.5" />
+                    센터 밖
+                  </span>
+                ) : onWifi ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[12px] font-bold text-emerald-700">
+                    <Wifi className="h-3.5 w-3.5" />
+                    센터 와이파이
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1.5 text-[12px] font-bold text-neutral-400">
+                    <Wifi className="h-3.5 w-3.5" />
+                    확인 중
+                  </span>
+                ))}
             </div>
             <div className="flex items-center gap-3">
               <SeatLegend />

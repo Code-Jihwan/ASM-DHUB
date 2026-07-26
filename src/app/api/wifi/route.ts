@@ -5,6 +5,6 @@ import { isCenterRequest } from "@/lib/net";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { allowed } = await isCenterRequest();
-  return NextResponse.json({ allowed });
+  const { allowed, enforced } = await isCenterRequest();
+  return NextResponse.json({ allowed, enforced });
 }
