@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Clock, MessageSquareWarning, Users } from "lucide-react";
+import { CheckCircle2, Clock, MessageSquareWarning, Users, Wifi } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { bookSeat, changeSeat } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -93,8 +94,25 @@ export function ReservePage({ seats, userId }: Props) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [changing, setChanging] = useState(false);
   const [reporting, setReporting] = useState(false);
+  // 센터 와이파이 여부. null=확인 중, true=센터, false=아님.
+  const [onWifi, setOnWifi] = useState<boolean | null>(null);
   // 이미 자동 취소한 예약 id. 갱신 전 중복 호출을 막는다.
   const autoCancelledRef = useRef<Set<string>>(new Set());
+
+  // 센터 와이파이(공인 IP)인지 서버에 물어 화면에 반영한다. 창에 다시 돌아올 때도 갱신.
+  const checkWifi = useCallback(() => {
+    fetch("/api/wifi", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setOnWifi(Boolean(j.allowed)))
+      .catch(() => setOnWifi(null));
+  }, []);
+
+  useEffect(() => {
+    checkWifi();
+    const onFocus = () => checkWifi();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [checkWifi]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
@@ -287,21 +305,16 @@ export function ReservePage({ seats, userId }: Props) {
     }
     const end = addMinutes(start, effectiveDuration);
 
+    // 센터 와이파이 강제는 이 서버 액션 안에서 IP로 재검사한다(클라이언트 우회 방지).
     const { error } = changing
-      ? await supabase.rpc("change_reservation", {
-          p_old_id: mine!.id,
-          p_seat_id: selected,
-          p_period: toRange(start, end),
-        })
-      : await supabase
-          .from("reservation")
-          .insert({ seat_id: selected, user_id: userId, period: toRange(start, end) });
+      ? await changeSeat(mine!.id, selected, toRange(start, end))
+      : await bookSeat(selected, toRange(start, end));
 
     setBusy(false);
 
     if (error) {
       // 변경 실패 시 원래 예약은 DB에서 그대로 살아있다.
-      setError(humanizeDbError(error));
+      setError(error);
       refresh();
       return;
     }
@@ -391,20 +404,28 @@ export function ReservePage({ seats, userId }: Props) {
   const freeCount = view.filter((s) => s.active && !s.busy).length;
   const mineRange = mine ? parseRange(mine.period) : null;
 
+  // 센터 와이파이가 아니면 예약을 막는다(서버에서도 강제). 확인 중(null)엔 막지 않는다.
+  const wifiBlocked = booking && onWifi === false;
+  const wifiText = "센터 와이파이에 연결한 뒤 예약할 수 있습니다. 와이파이를 연결하고 다시 확인해 주세요.";
+
   // 지금이 운영 시간(08~20시) 밖이면 예약 자체를 받지 않는다. 그 외 시간은 자율 이용.
   const outsideHours = booking && startBase === null;
   const hoursText = `예약은 ${String(POLICY.displayOpenHour).padStart(2, "0")}–${String(POLICY.displayCloseHour).padStart(2, "0")}시에만 가능합니다. 그 외 시간은 예약 없이 자유롭게 이용하세요.`;
 
+  const blocked = wifiBlocked || outsideHours;
+
   // 고른 좌석을 지금 예약할 수 없는 경우의 안내 문구.
-  const panelLocked = outsideHours
-    ? hoursText
-    : selected === null
-      ? null
-      : occupiedNow
-        ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
-        : maxMin < POLICY.slotMinutes
-          ? "지금 이 자리는 남은 시간이 없습니다. 다른 자리를 고르거나 잠시 뒤 다시 시도하세요."
-          : null;
+  const panelLocked = wifiBlocked
+    ? wifiText
+    : outsideHours
+      ? hoursText
+      : selected === null
+        ? null
+        : occupiedNow
+          ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
+          : maxMin < POLICY.slotMinutes
+            ? "지금 이 자리는 남은 시간이 없습니다. 다른 자리를 고르거나 잠시 뒤 다시 시도하세요."
+            : null;
 
   return (
     <>
@@ -461,7 +482,23 @@ export function ReservePage({ seats, userId }: Props) {
         </div>
       )}
 
-      {outsideHours && (
+      {wifiBlocked && (
+        <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm font-bold text-red-700">
+          <span className="flex items-center gap-2.5">
+            <Wifi className="h-4 w-4 shrink-0" />
+            {wifiText}
+          </span>
+          <button
+            type="button"
+            onClick={checkWifi}
+            className="shrink-0 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-xs font-bold text-red-600 transition-all hover:bg-red-100"
+          >
+            다시 확인
+          </button>
+        </div>
+      )}
+
+      {!wifiBlocked && outsideHours && (
         <div className="mb-4 flex shrink-0 items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-bold text-amber-800">
           <Clock className="h-4 w-4 shrink-0" />
           지금은 예약 시간이 아닙니다. {hoursText}
@@ -500,7 +537,7 @@ export function ReservePage({ seats, userId }: Props) {
               selected={selected}
               onSelect={chooseSeat}
               now={now}
-              disabled={busy || !booking || outsideHours}
+              disabled={busy || !booking || blocked}
             />
           </div>
         </section>
