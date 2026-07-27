@@ -186,7 +186,7 @@ const LEGEND = [
 
 export function SeatLegend() {
   return (
-    <div className="grid grid-cols-3 items-center gap-x-3 gap-y-2 rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold text-neutral-500 sm:flex sm:flex-wrap sm:gap-x-4">
+    <div className="grid w-fit grid-cols-[repeat(3,max-content)] items-center gap-x-4 gap-y-2 rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-2.5 text-[11px] font-bold text-neutral-500 sm:flex sm:w-auto sm:flex-wrap">
       {LEGEND.map((i) => (
         <span key={i.t} className="flex items-center gap-2">
           <span className={`h-3 w-3 shrink-0 rounded border ${i.c}`} />
