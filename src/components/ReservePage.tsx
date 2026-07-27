@@ -329,12 +329,15 @@ export function ReservePage({ seats, userId }: Props) {
     selected !== null
       ? Math.max(effectiveDuration, POLICY.slotMinutes)
       : durationMin;
-  const mapFrom = moveRange ? moveRange.start : booking ? startBase : now;
+  // 운영시간(08~20시) 밖이면 startBase가 null이지만, 좌석도는 계속 그려야 하므로
+  // now를 기준 창으로 쓴다(예약은 어차피 disabled로 막힌다). 좌석만 보이고 클릭만 안 된다.
+  const winBase = startBase ?? now;
+  const mapFrom = moveRange ? moveRange.start : booking ? winBase : now;
   const mapTo = moveRange
     ? moveRange.end
     : booking
-      ? startBase
-        ? addMinutes(startBase, windowLen)
+      ? winBase
+        ? addMinutes(winBase, windowLen)
         : null
       : now
         ? addMinutes(now, 1)
