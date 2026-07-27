@@ -34,3 +34,16 @@ end;
 $$;
 
 grant execute on function admin_set_seat_active(int, boolean) to authenticated;
+
+-- 좌석 잠금/해제를 예약 화면에 실시간으로 밀어주기 위해 publication에 seat 을 추가한다.
+-- 이미 등록돼 있으면 건너뛴다(중복 추가는 오류).
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'seat'
+     ) then
+    alter publication supabase_realtime add table seat;
+  end if;
+end $$;

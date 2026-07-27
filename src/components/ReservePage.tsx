@@ -100,6 +100,10 @@ export function ReservePage({ seats, userId }: Props) {
   const [wifiEnforced, setWifiEnforced] = useState(false);
   // 자리별 재예약 쿨다운이 끝나는 시각. seatId → until. 내가 방금 쓴 자리에만 걸린다.
   const [cooldowns, setCooldowns] = useState<Map<number, Date>>(new Map());
+  // 좌석 잠금 상태(관리자가 점검용으로 잠글 수 있다). 실시간으로 반영한다.
+  const [seatActive, setSeatActive] = useState<Map<number, boolean>>(
+    () => new Map(seats.map((s) => [s.id, s.active])),
+  );
   // 이미 자동 취소한 예약 id. 갱신 전 중복 호출을 막는다.
   const autoCancelledRef = useRef<Set<string>>(new Set());
 
@@ -190,10 +194,26 @@ export function ReservePage({ seats, userId }: Props) {
     };
   }, [supabase, userId, refreshKey]);
 
+  // 좌석 잠금 상태를 받아 온다. 관리자가 점검용으로 잠그면 여기로 반영된다.
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("seat")
+      .select("id, active")
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setSeatActive(new Map(data.map((r) => [r.id as number, r.active as boolean])));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, refreshKey]);
+
   useEffect(() => {
     const ch = supabase
       .channel("reservation-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "reservation" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "seat" }, refresh)
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -283,13 +303,14 @@ export function ReservePage({ seats, userId }: Props) {
       const hit = rows.find((r) => r.seatId === s.id && r.start < mapTo && r.end > mapFrom);
       return {
         ...s,
+        active: seatActive.get(s.id) ?? s.active,
         busy: hit !== undefined,
         mine: hit?.userId === userId,
         reserverName: hit?.name ?? null,
         awaySince: hit?.awaySince ?? null,
       };
     });
-  }, [seats, rows, mapFrom, mapTo, userId]);
+  }, [seats, rows, mapFrom, mapTo, userId, seatActive]);
 
   const flash = (m: string) => {
     setToast(m);

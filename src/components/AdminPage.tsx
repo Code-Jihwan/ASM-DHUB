@@ -28,6 +28,7 @@ type Report = {
   created_at: string;
   kind: "occupancy" | "facility" | "other";
   reported_name: string | null;
+  reporter_id: string;
 };
 
 const REPORT_KIND = {
@@ -96,7 +97,7 @@ export function AdminPage({ seats, userId }: Props) {
   const fetchReports = useCallback(async () => {
     const { data } = await supabase
       .from("report")
-      .select("id, seat_id, message, resolved, created_at, kind, reported_name")
+      .select("id, seat_id, message, resolved, created_at, kind, reported_name, reporter_id")
       .order("created_at", { ascending: false })
       .limit(50);
     return (data ?? []) as Report[];
@@ -241,6 +242,9 @@ export function AdminPage({ seats, userId }: Props) {
   };
   const shownReports =
     reportFilter === "all" ? reports : reports.filter((r) => r.kind === reportFilter);
+
+  // 신고자 이름은 관리자만 볼 수 있는 사용자 목록에서 찾는다.
+  const nameById = new Map((users ?? []).map((u) => [u.user_id, u.name]));
 
   const REPORT_TABS = [
     { key: "all" as const, label: "전체" },
@@ -471,7 +475,8 @@ export function AdminPage({ seats, userId }: Props) {
                         {r.message}
                       </p>
                       <p className="mt-1 text-[11px] font-bold text-neutral-400">
-                        {fmtDate(new Date(r.created_at))} {fmtTime(new Date(r.created_at))}
+                        신고자 {nameById.get(r.reporter_id) ?? "(알 수 없음)"} · {fmtDate(new Date(r.created_at))}{" "}
+                        {fmtTime(new Date(r.created_at))}
                       </p>
                     </div>
                     {!r.resolved && (
