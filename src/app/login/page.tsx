@@ -49,7 +49,7 @@ export default function Login() {
       </div>
 
       {/* 글래스모피즘 카드. 좌측에 로고·타이틀·캡슐, 우측에 마스코트. */}
-      <div className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/30 bg-white/15 p-8 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:max-w-[500px] sm:p-12">
+      <div className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/30 bg-white/15 p-6 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:max-w-[500px] sm:p-12">
         {/* 상단: 좌측 정보 + 우측 마스코트(여백을 두고 세로 중앙에). */}
         <div className="flex items-center gap-2 sm:gap-5">
           <div className="min-w-0 flex-1">
@@ -86,7 +86,7 @@ export default function Login() {
             width={802}
             height={941}
             priority
-            className="pointer-events-none mr-1 w-20 shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
+            className="pointer-events-none mr-1 w-[108px] shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
           />
         </div>
 
