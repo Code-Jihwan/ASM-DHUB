@@ -19,5 +19,5 @@ export default async function Onboarding() {
     .maybeSingle();
   if (profile) redirect("/");
 
-  return <OnboardingForm userId={user.id} email={user.email ?? ""} />;
+  return <OnboardingForm email={user.email ?? ""} />;
 }

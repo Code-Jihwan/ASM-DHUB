@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 
-type Props = { userId: string; email: string };
+type Props = { email: string };
 
 const FIELD =
   "w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold " +
@@ -14,7 +14,7 @@ const FIELD =
 
 const LABEL = "text-xs font-bold text-neutral-500";
 
-export function OnboardingForm({ userId, email }: Props) {
+export function OnboardingForm({ email }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [team, setTeam] = useState("");
@@ -29,10 +29,10 @@ export function OnboardingForm({ userId, email }: Props) {
     setError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.from("profile").insert({
-      user_id: userId,
-      name: name.trim(),
-      team: team.trim(),
+    // 명단(roster) 대조 후 프로필 생성. 명단에 없거나 이미 사용된 항목이면 거부된다.
+    const { error } = await supabase.rpc("register_profile", {
+      p_name: name.trim(),
+      p_team: team.trim(),
     });
 
     if (error) {
