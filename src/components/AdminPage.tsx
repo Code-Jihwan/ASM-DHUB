@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, ShieldCheck, ShieldOff } from "lucide-react";
+import { Lock, LockOpen, Search, ShieldCheck, ShieldOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -76,6 +76,12 @@ export function AdminPage({ seats, userId }: Props) {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [userQuery, setUserQuery] = useState("");
   const [savingUser, setSavingUser] = useState<string | null>(null);
+  // 좌석 잠금 상태. props(서버 렌더)를 기본값으로, 잠금/해제 시 갱신한다.
+  const [seatActive, setSeatActive] = useState<Map<number, boolean>>(
+    () => new Map(seats.map((s) => [s.id, s.active])),
+  );
+  const [savingSeat, setSavingSeat] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -104,6 +110,13 @@ export function AdminPage({ seats, userId }: Props) {
     fetchReports().then((rows) => {
       if (!cancelled) setReports(rows);
     });
+    supabase
+      .from("seat")
+      .select("id, active")
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setSeatActive(new Map(data.map((r) => [r.id as number, r.active as boolean])));
+      });
     supabase.rpc("admin_list_profiles").then(({ data, error }) => {
       if (cancelled) return;
       if (error) {
@@ -159,13 +172,48 @@ export function AdminPage({ seats, userId }: Props) {
       const o = byId.get(s.id);
       return {
         ...s,
+        active: seatActive.get(s.id) ?? s.active,
         busy: o !== undefined,
         mine: o?.user_id === userId,
         reserverName: o?.reserver_name ?? null,
         awaySince: o?.away_since ? new Date(o.away_since) : null,
       };
     });
-  }, [seats, occupancy, userId]);
+  }, [seats, occupancy, userId, seatActive]);
+
+  // 좌석 점검 잠금/해제. 잠글 때는 그 자리의 진행 중·예정 예약이 함께 취소된다.
+  async function toggleSeatLock(seatId: number, currentlyActive: boolean) {
+    if (currentlyActive) {
+      const ok = window.confirm(
+        "이 자리를 점검용으로 잠급니다.\n진행 중이거나 예정된 이 자리의 예약이 있으면 함께 취소됩니다.\n계속할까요?",
+      );
+      if (!ok) return;
+    }
+    setSavingSeat(true);
+    setError(null);
+    setNotice(null);
+    const { data, error } = await supabase.rpc("admin_set_seat_active", {
+      p_seat_id: seatId,
+      p_active: !currentlyActive,
+    });
+    setSavingSeat(false);
+    if (error) {
+      setError(humanizeDbError(error));
+      return;
+    }
+    setSeatActive((prev) => new Map(prev).set(seatId, !currentlyActive));
+    const label = seats.find((s) => s.id === seatId)?.label ?? seatId;
+    if (currentlyActive) {
+      const cancelled = (data as number) ?? 0;
+      setNotice(
+        `${label}번 자리를 잠갔습니다.` +
+          (cancelled > 0 ? ` 예약 ${cancelled}건을 함께 취소했습니다.` : ""),
+      );
+    } else {
+      setNotice(`${label}번 자리 잠금을 해제했습니다.`);
+    }
+    setReloadKey((k) => k + 1); // 사용 현황·이력 다시 불러오기
+  }
 
   async function resolveReport(id: string) {
     const { error } = await supabase.from("report").update({ resolved: true }).eq("id", id);
@@ -181,6 +229,7 @@ export function AdminPage({ seats, userId }: Props) {
   }
 
   const seat = seats.find((s) => s.id === selected);
+  const seatIsActive = seat ? (seatActive.get(seat.id) ?? seat.active) : true;
   const openReports = reports.filter((r) => !r.resolved);
 
   // 유형별 미처리 건수. 필터 탭의 배지로 쓴다.
@@ -224,6 +273,12 @@ export function AdminPage({ seats, userId }: Props) {
         </div>
       )}
 
+      {notice && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-sm font-bold text-emerald-700">
+          {notice}
+        </div>
+      )}
+
       <div className="flex flex-col gap-5 md:gap-6 lg:flex-row">
         <section className={`${CARD} flex min-w-0 flex-1 flex-col`}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -244,9 +299,41 @@ export function AdminPage({ seats, userId }: Props) {
         </section>
 
         <aside className={`${CARD} flex w-full shrink-0 flex-col lg:w-[340px]`}>
-          <h2 className="mb-4 text-lg font-black tracking-tight text-neutral-900">
-            {seat ? `${seat.label}번 자리 이력` : "좌석 이력"}
-          </h2>
+          <div className="mb-4 flex items-start justify-between gap-2">
+            <h2 className="text-lg font-black tracking-tight text-neutral-900">
+              {seat ? `${seat.label}번 자리` : "좌석"}
+              {seat && !seatIsActive && (
+                <span className="ml-2 rounded-md bg-neutral-200 px-1.5 py-0.5 text-[11px] font-bold text-neutral-600 align-middle">
+                  점검 중
+                </span>
+              )}
+            </h2>
+            {seat && (
+              <button
+                type="button"
+                onClick={() => toggleSeatLock(seat.id, seatIsActive)}
+                disabled={savingSeat}
+                className={
+                  "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40 " +
+                  (seatIsActive
+                    ? "border border-neutral-200 text-neutral-600 hover:border-red-500 hover:text-red-600"
+                    : "bg-neutral-900 text-white hover:bg-black")
+                }
+              >
+                {seatIsActive ? (
+                  <>
+                    <Lock className="h-3.5 w-3.5" />
+                    예약 잠금
+                  </>
+                ) : (
+                  <>
+                    <LockOpen className="h-3.5 w-3.5" />
+                    잠금 해제
+                  </>
+                )}
+              </button>
+            )}
+          </div>
 
           {!seat && <p className={EMPTY}>도면에서 좌석을 선택하세요.</p>}
 

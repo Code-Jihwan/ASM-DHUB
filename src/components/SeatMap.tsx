@@ -28,11 +28,12 @@ const TILE =
   "px-1.5 text-center shadow-sm transition-all duration-200 ease-out";
 
 function tileClass(s: SeatView, selected: boolean, clickable: boolean, away: boolean) {
-  if (!s.active) {
-    return `${TILE} cursor-not-allowed border-dashed border-neutral-200 bg-neutral-50 text-neutral-300`;
-  }
   if (selected) {
     return `${TILE} z-10 scale-105 border-neutral-900 bg-neutral-900 text-white shadow-lg ring-2 ring-neutral-900/10`;
+  }
+  // 점검용으로 잠근 자리. 관리자 화면에선 눌러서 해제할 수 있어 hover를 준다.
+  if (!s.active) {
+    return `${TILE} border-dashed border-neutral-300 bg-neutral-100 text-neutral-400 ${clickable ? "cursor-pointer hover:border-neutral-500" : "cursor-not-allowed"}`;
   }
   if (s.mine) {
     return `${TILE} cursor-default border-emerald-600 bg-emerald-600 text-white shadow-md`;
@@ -100,7 +101,8 @@ export function SeatMap({
                     const isAway = away !== null;
                     const isSelected = selected === s.id;
                     // 빈 자리는 예약하러, 사용 중인 자리는 예약 정보를 보러 누른다. 내 자리는 제외.
-                    const clickable = s.active && !disabled && (anySelectable || !s.mine);
+                    // 관리자 화면(anySelectable)에선 잠근 자리도 눌러서 해제할 수 있다.
+                    const clickable = !disabled && (anySelectable || (s.active && !s.mine));
 
                     const state = !s.active
                       ? "사용 불가"
@@ -123,6 +125,17 @@ export function SeatMap({
                         <span className="text-[19px] font-black leading-none tabular-nums">
                           {s.label}
                         </span>
+
+                        {!s.active && (
+                          <span
+                            className={
+                              "text-[11px] font-bold leading-none " +
+                              (isSelected ? "text-white/70" : "text-neutral-400")
+                            }
+                          >
+                            점검
+                          </span>
+                        )}
 
                         {s.reserverName && (
                           <span
@@ -168,6 +181,7 @@ const LEGEND = [
   { c: "border-amber-400 bg-amber-100", t: "자리비움" },
   { c: "border-emerald-600 bg-emerald-600", t: "내 예약" },
   { c: "border-neutral-900 bg-neutral-900 shadow-md", t: "선택됨" },
+  { c: "border-dashed border-neutral-300 bg-neutral-100", t: "사용 불가" },
 ];
 
 export function SeatLegend() {
