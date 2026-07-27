@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Lock, LockOpen, Search, ShieldCheck, ShieldOff } from "lucide-react";
+import { CheckCircle2, Lock, LockOpen, Search, ShieldCheck, ShieldOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -80,6 +80,7 @@ export function AdminPage({ seats, userId }: Props) {
   const [reportFilter, setReportFilter] = useState<"all" | Report["kind"]>(
     "all",
   );
+  const [resolvedOnly, setResolvedOnly] = useState(false); // 처리된 신고만 볼지
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [userQuery, setUserQuery] = useState("");
   const [savingUser, setSavingUser] = useState<string | null>(null);
@@ -260,10 +261,9 @@ export function AdminPage({ seats, userId }: Props) {
     facility: openReports.filter((r) => r.kind === "facility").length,
     other: openReports.filter((r) => r.kind === "other").length,
   };
-  const shownReports =
-    reportFilter === "all"
-      ? reports
-      : reports.filter((r) => r.kind === reportFilter);
+  const shownReports = reports
+    .filter((r) => reportFilter === "all" || r.kind === reportFilter)
+    .filter((r) => !resolvedOnly || r.resolved);
 
   // 신고자 이름은 관리자만 볼 수 있는 사용자 목록에서 찾는다.
   const nameById = new Map((users ?? []).map((u) => [u.user_id, u.name]));
@@ -488,12 +488,28 @@ export function AdminPage({ seats, userId }: Props) {
               </button>
             );
           })}
+
+          {/* 처리된 신고만 보기 토글 */}
+          <button
+            type="button"
+            onClick={() => setResolvedOnly((v) => !v)}
+            className={`ml-auto flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-all ${
+              resolvedOnly
+                ? "bg-emerald-600 text-white"
+                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+            }`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            처리함만
+          </button>
         </div>
 
         {reports.length === 0 ? (
           <p className={EMPTY}>접수된 내용이 없습니다.</p>
         ) : shownReports.length === 0 ? (
-          <p className={EMPTY}>이 유형의 신고가 없습니다.</p>
+          <p className={EMPTY}>
+            {resolvedOnly ? "처리된 신고가 없습니다." : "이 유형의 신고가 없습니다."}
+          </p>
         ) : (
           <ul className="flex flex-col gap-2">
             {shownReports.map((r) => {
@@ -536,7 +552,12 @@ export function AdminPage({ seats, userId }: Props) {
                         {fmtTime(new Date(r.created_at))}
                       </p>
                     </div>
-                    {!r.resolved && (
+                    {r.resolved ? (
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-emerald-600">
+                        <CheckCircle2 className="h-5 w-5" />
+                        처리됨
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         onClick={() => resolveReport(r.id)}
