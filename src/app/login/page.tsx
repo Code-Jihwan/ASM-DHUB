@@ -66,7 +66,7 @@ export default function Login() {
             <h1 className="mt-6 text-[28px] font-black leading-tight tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
               @@자리요
             </h1>
-            <div className="mt-3.5 flex flex-col items-start gap-2 sm:mt-4">
+            <div className="mt-3.5 flex flex-col items-start gap-3.5 sm:mt-4 sm:gap-4">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
                 <MapPin className="h-3.5 w-3.5" />
                 부산센터 D-HUB · 48석
@@ -86,7 +86,7 @@ export default function Login() {
             width={802}
             height={941}
             priority
-            className="pointer-events-none w-24 shrink-0 select-none drop-shadow-lg sm:w-40"
+            className="pointer-events-none mr-2 w-24 shrink-0 select-none drop-shadow-lg sm:mr-5 sm:w-40"
           />
         </div>
 
