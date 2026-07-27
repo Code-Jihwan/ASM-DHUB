@@ -63,7 +63,7 @@ export default function Login() {
               className="h-9 w-auto drop-shadow-sm sm:h-11"
             />
 
-            <h1 className="mt-6 text-[28px] font-black leading-tight tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
+            <h1 className="mt-6 text-[28px] font-black leading-none tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
               @@자리요
             </h1>
             <div className="mt-3.5 flex flex-col items-start gap-3.5 sm:mt-4 sm:gap-4">
@@ -86,7 +86,7 @@ export default function Login() {
             width={802}
             height={941}
             priority
-            className="pointer-events-none mr-2 w-24 shrink-0 select-none drop-shadow-lg sm:mr-5 sm:w-40"
+            className="pointer-events-none mr-3 w-28 shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
           />
         </div>
 
