@@ -80,7 +80,7 @@ export function AdminPage({ seats, userId }: Props) {
   const [reportFilter, setReportFilter] = useState<"all" | Report["kind"]>(
     "all",
   );
-  const [resolvedOnly, setResolvedOnly] = useState(false); // 처리된 신고만 볼지
+  const [reportStatus, setReportStatus] = useState<"pending" | "done">("pending"); // 처리전 / 처리함
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [userQuery, setUserQuery] = useState("");
   const [savingUser, setSavingUser] = useState<string | null>(null);
@@ -263,7 +263,7 @@ export function AdminPage({ seats, userId }: Props) {
   };
   const shownReports = reports
     .filter((r) => reportFilter === "all" || r.kind === reportFilter)
-    .filter((r) => !resolvedOnly || r.resolved);
+    .filter((r) => (reportStatus === "done" ? r.resolved : !r.resolved));
 
   // 신고자 이름은 관리자만 볼 수 있는 사용자 목록에서 찾는다.
   const nameById = new Map((users ?? []).map((u) => [u.user_id, u.name]));
@@ -489,26 +489,35 @@ export function AdminPage({ seats, userId }: Props) {
             );
           })}
 
-          {/* 처리된 신고만 보기 토글 */}
-          <button
-            type="button"
-            onClick={() => setResolvedOnly((v) => !v)}
-            className={`ml-auto flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-all ${
-              resolvedOnly
-                ? "bg-emerald-600 text-white"
-                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
-            }`}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            처리함만
-          </button>
+          {/* 처리 상태 필터: 처리전 / 처리함 */}
+          <div className="ml-auto flex items-center gap-1 rounded-full bg-neutral-100 p-1">
+            {(
+              [
+                { key: "pending", label: "처리전" },
+                { key: "done", label: "처리함" },
+              ] as const
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setReportStatus(key)}
+                className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-all ${
+                  reportStatus === key
+                    ? "bg-white text-neutral-900 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {reports.length === 0 ? (
           <p className={EMPTY}>접수된 내용이 없습니다.</p>
         ) : shownReports.length === 0 ? (
           <p className={EMPTY}>
-            {resolvedOnly ? "처리된 신고가 없습니다." : "이 유형의 신고가 없습니다."}
+            {reportStatus === "done" ? "처리된 신고가 없습니다." : "처리할 신고가 없습니다."}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
