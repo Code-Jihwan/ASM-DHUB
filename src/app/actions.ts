@@ -27,12 +27,8 @@ export async function bookSeat(seatId: number, period: string): Promise<{ error?
   return error ? { error: humanizeDbError(error) } : {};
 }
 
-/** 예약 변경(자리·시간). 역시 센터 와이파이에서만. */
-export async function changeSeat(
-  oldId: string,
-  seatId: number,
-  period: string,
-): Promise<{ error?: string }> {
+/** 자리 변경: 이용 시간은 그대로 두고 자리만 옮긴다. 역시 센터 와이파이에서만. */
+export async function changeSeat(oldId: string, seatId: number): Promise<{ error?: string }> {
   const { allowed } = await isCenterRequest();
   if (!allowed) return { error: WIFI_MSG };
 
@@ -40,7 +36,6 @@ export async function changeSeat(
   const { error } = await supabase.rpc("change_reservation", {
     p_old_id: oldId,
     p_seat_id: seatId,
-    p_period: period,
   });
   return error ? { error: humanizeDbError(error) } : {};
 }

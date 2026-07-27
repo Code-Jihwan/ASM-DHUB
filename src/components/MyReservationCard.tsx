@@ -218,12 +218,12 @@ export function MyReservationCard({
         {isAway ? (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-relaxed text-amber-800">
             자리비움 중입니다. <b>{autoCancelIn}분</b> 안에 “복귀했어요”를 누르지 않으면 예약이
-            자동으로 취소됩니다.
+            자동으로 취소되고, 이 자리는 이후 {POLICY.cooldownMinutes}분간 다시 예약할 수 없습니다.
           </p>
         ) : (
           <p className="mt-3 text-[11px] font-medium leading-relaxed text-neutral-400">
             자리를 비운 뒤 {POLICY.awayLimitMinutes}분 안에 “복귀했어요”를 누르지 않으면 예약이
-            자동으로 취소됩니다.
+            자동으로 취소되고, 이 자리는 이후 {POLICY.cooldownMinutes}분간 다시 예약할 수 없습니다.
           </p>
         )}
 

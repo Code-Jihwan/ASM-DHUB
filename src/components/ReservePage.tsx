@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Clock, MessageSquareWarning, Users, Wifi, WifiOff } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  MessageSquareWarning,
+  Users,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { bookSeat, changeSeat } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
@@ -67,14 +74,18 @@ function StatCard({
         >
           {label}
         </p>
-        <div className="truncate text-[22px] font-black tracking-tight">{value}</div>
+        <div className="truncate text-[22px] font-black tracking-tight">
+          {value}
+        </div>
       </div>
       <div
         className={`ml-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] ${
           active ? "bg-neutral-800" : "bg-neutral-50"
         }`}
       >
-        <Icon className={`h-5 w-5 ${active ? "text-white" : "text-neutral-700"}`} />
+        <Icon
+          className={`h-5 w-5 ${active ? "text-white" : "text-neutral-700"}`}
+        />
       </div>
     </div>
   );
@@ -129,7 +140,9 @@ export function ReservePage({ seats, userId }: Props) {
 
   // 예약 시작은 늘 "지금 이 분". 최대 이용 시간(2h) 앞의 예약만 알면 충분하다.
   const startBase = now ? bookingStart(now) : null;
-  const winTo = startBase ? addMinutes(startBase, POLICY.maxBaseHours * 60) : null;
+  const winTo = startBase
+    ? addMinutes(startBase, POLICY.maxBaseHours * 60)
+    : null;
 
   // now는 30초마다 새 객체가 되지만 창의 경계는 1분에 한 번만 움직인다.
   // 시각 값으로 의존성을 잡아 불필요한 재조회를 막는다.
@@ -142,7 +155,9 @@ export function ReservePage({ seats, userId }: Props) {
     let cancelled = false;
     supabase
       .from("seat_occupancy")
-      .select("seat_id, user_id, reserver_name, away_since, period, reservation_id, extended")
+      .select(
+        "seat_id, user_id, reserver_name, away_since, period, reservation_id, extended",
+      )
       .overlaps("period", toRange(new Date(fromMs), new Date(toMs)))
       .then(({ data }) => {
         if (!cancelled) setOccupancy((data ?? []) as Occupancy[]);
@@ -166,7 +181,8 @@ export function ReservePage({ seats, userId }: Props) {
         const nowT = Date.now();
         // 지금 살아있는 내 예약(취소 안 됐고 아직 안 끝난 것)
         const live = rows.find(
-          (r) => r.status === "active" && parseRange(r.period).end.getTime() > nowT,
+          (r) =>
+            r.status === "active" && parseRange(r.period).end.getTime() > nowT,
         );
         setMine(live ?? null);
 
@@ -179,15 +195,21 @@ export function ReservePage({ seats, userId }: Props) {
             ref = end.getTime(); // 정상 종료 시각
           } else if (r.status === "cancelled" && r.cancelled_at) {
             const cancelledAt = new Date(r.cancelled_at).getTime();
-            if (cancelledAt - start.getTime() >= POLICY.cancelGraceMinutes * 60_000) {
+            if (
+              cancelledAt - start.getTime() >=
+              POLICY.cancelGraceMinutes * 60_000
+            ) {
               ref = cancelledAt; // 10분 이상 점유 후 취소 → 취소 시점 기준
             }
           }
           if (ref === null) continue;
           const until = ref + POLICY.cooldownMinutes * 60_000;
-          if (until > nowT) cd.set(r.seat_id, Math.max(cd.get(r.seat_id) ?? 0, until));
+          if (until > nowT)
+            cd.set(r.seat_id, Math.max(cd.get(r.seat_id) ?? 0, until));
         }
-        setCooldowns(new Map([...cd].map(([seat, until]) => [seat, new Date(until)])));
+        setCooldowns(
+          new Map([...cd].map(([seat, until]) => [seat, new Date(until)])),
+        );
       });
     return () => {
       cancelled = true;
@@ -202,7 +224,9 @@ export function ReservePage({ seats, userId }: Props) {
       .select("id, active")
       .then(({ data }) => {
         if (cancelled || !data) return;
-        setSeatActive(new Map(data.map((r) => [r.id as number, r.active as boolean])));
+        setSeatActive(
+          new Map(data.map((r) => [r.id as number, r.active as boolean])),
+        );
       });
     return () => {
       cancelled = true;
@@ -212,8 +236,16 @@ export function ReservePage({ seats, userId }: Props) {
   useEffect(() => {
     const ch = supabase
       .channel("reservation-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "reservation" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "seat" }, refresh)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reservation" },
+        refresh,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "seat" },
+        refresh,
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -263,8 +295,11 @@ export function ReservePage({ seats, userId }: Props) {
       let cap = policyMax;
       if (next) {
         const untilNext =
-          Math.floor((next.start.getTime() - startBase.getTime()) / 60000 / POLICY.slotMinutes) *
-          POLICY.slotMinutes;
+          Math.floor(
+            (next.start.getTime() - startBase.getTime()) /
+              60000 /
+              POLICY.slotMinutes,
+          ) * POLICY.slotMinutes;
         cap = Math.min(cap, untilNext);
       }
       return { occupiedNow: false, maxMin: cap };
@@ -286,21 +321,31 @@ export function ReservePage({ seats, userId }: Props) {
         )
       : undefined;
 
+  // 자리 변경 중이면 기존 예약의 이용 구간. 그 시간에 빈 자리만 옮길 수 있다.
+  const moveRange = changing && mine ? parseRange(mine.period) : null;
+
   // 좌석도가 비었는지 판정할 구간. 좌석을 고르면 그 이용 구간, 아니면 durationMin 기준.
-  const windowLen = selected !== null ? Math.max(effectiveDuration, POLICY.slotMinutes) : durationMin;
-  const mapFrom = booking ? startBase : now;
-  const mapTo = booking
-    ? startBase
-      ? addMinutes(startBase, windowLen)
-      : null
-    : now
-      ? addMinutes(now, 1)
-      : null;
+  const windowLen =
+    selected !== null
+      ? Math.max(effectiveDuration, POLICY.slotMinutes)
+      : durationMin;
+  const mapFrom = moveRange ? moveRange.start : booking ? startBase : now;
+  const mapTo = moveRange
+    ? moveRange.end
+    : booking
+      ? startBase
+        ? addMinutes(startBase, windowLen)
+        : null
+      : now
+        ? addMinutes(now, 1)
+        : null;
 
   const view: SeatView[] = useMemo(() => {
     if (!mapFrom || !mapTo) return [];
     return seats.map((s) => {
-      const hit = rows.find((r) => r.seatId === s.id && r.start < mapTo && r.end > mapFrom);
+      const hit = rows.find(
+        (r) => r.seatId === s.id && r.start < mapTo && r.end > mapFrom,
+      );
       return {
         ...s,
         active: seatActive.get(s.id) ?? s.active,
@@ -321,7 +366,8 @@ export function ReservePage({ seats, userId }: Props) {
   // 앱이 닫혀 있으면 못 도므로 서버 쪽 pg_cron(0012)이 최종 안전장치다.
   useEffect(() => {
     if (!mine?.away_since || !now) return;
-    if (awayMinutes(new Date(mine.away_since), now) < POLICY.awayLimitMinutes) return;
+    if (awayMinutes(new Date(mine.away_since), now) < POLICY.awayLimitMinutes)
+      return;
     if (autoCancelledRef.current.has(mine.id)) return;
     autoCancelledRef.current.add(mine.id);
     supabase
@@ -331,7 +377,9 @@ export function ReservePage({ seats, userId }: Props) {
       .then(({ error }) => {
         if (!error) {
           refresh();
-          flash(`자리비움 ${POLICY.awayLimitMinutes}분 초과로 예약이 자동 취소되었습니다.`);
+          flash(
+            `자리비움 ${POLICY.awayLimitMinutes}분 초과로 예약이 자동 취소되었습니다. 이 자리는 ${POLICY.cooldownMinutes}분간 다시 예약할 수 없어요.`,
+          );
         }
       });
   }, [mine, now, supabase, refresh]);
@@ -342,24 +390,31 @@ export function ReservePage({ seats, userId }: Props) {
   }
 
   async function submit() {
-    if (selected === null || effectiveDuration < POLICY.slotMinutes) return;
+    if (selected === null) return;
     setBusy(true);
     setError(null);
 
-    // 시작은 제출 시점 기준으로 다시 잡는다(렌더 사이 분이 넘어가면 지난 시간으로 거부됨).
-    // 오픈 직전 유예 시간이면 08:00으로 당겨진다.
-    const start = bookingStart(new Date());
-    if (!start) {
-      setBusy(false);
-      setError("지금은 예약할 수 있는 시간이 아닙니다.");
-      return;
+    let error: string | undefined;
+    if (changing) {
+      // 자리 변경은 이용 시간을 그대로 둔 채 자리만 옮긴다(시간 재계산 없음).
+      ({ error } = await changeSeat(mine!.id, selected));
+    } else {
+      if (effectiveDuration < POLICY.slotMinutes) {
+        setBusy(false);
+        return;
+      }
+      // 시작은 제출 시점 기준으로 다시 잡는다(렌더 사이 분이 넘어가면 지난 시간으로 거부됨).
+      // 오픈 직전 유예 시간이면 08:00으로 당겨진다.
+      const start = bookingStart(new Date());
+      if (!start) {
+        setBusy(false);
+        setError("지금은 예약할 수 있는 시간이 아닙니다.");
+        return;
+      }
+      const end = addMinutes(start, effectiveDuration);
+      // 센터 와이파이 강제는 이 서버 액션 안에서 IP로 재검사한다(클라이언트 우회 방지).
+      ({ error } = await bookSeat(selected, toRange(start, end)));
     }
-    const end = addMinutes(start, effectiveDuration);
-
-    // 센터 와이파이 강제는 이 서버 액션 안에서 IP로 재검사한다(클라이언트 우회 방지).
-    const { error } = changing
-      ? await changeSeat(mine!.id, selected, toRange(start, end))
-      : await bookSeat(selected, toRange(start, end));
 
     setBusy(false);
 
@@ -406,7 +461,10 @@ export function ReservePage({ seats, userId }: Props) {
     if (!mine) return;
     setBusy(true);
     setError(null);
-    const { error } = await supabase.rpc("set_away", { p_id: mine.id, p_away: away });
+    const { error } = await supabase.rpc("set_away", {
+      p_id: mine.id,
+      p_away: away,
+    });
     setBusy(false);
 
     if (error) {
@@ -414,7 +472,11 @@ export function ReservePage({ seats, userId }: Props) {
       return;
     }
     refresh();
-    flash(away ? "자리비움으로 표시했습니다." : "복귀로 표시했습니다.");
+    flash(
+      away
+        ? `자리비움으로 표시했습니다. ${POLICY.awayLimitMinutes}분 안에 복귀하지 않으면 예약이 취소되고, 이 자리는 이후 ${POLICY.cooldownMinutes}분간 예약할 수 없어요.`
+        : "복귀로 표시했습니다.",
+    );
   }
 
   async function cancel() {
@@ -457,32 +519,39 @@ export function ReservePage({ seats, userId }: Props) {
 
   // 센터 와이파이가 아니면 예약을 막는다(서버에서도 강제). 확인 중(null)엔 막지 않는다.
   const wifiBlocked = booking && onWifi === false;
-  const wifiText = "센터 와이파이에 연결한 뒤 예약할 수 있습니다. 와이파이를 연결하고 다시 확인해 주세요.";
+  const wifiText =
+    "센터 와이파이에 연결한 뒤 예약할 수 있습니다. 와이파이를 연결하고 다시 확인해 주세요.";
 
   // 지금이 운영 시간(08~20시) 밖이면 예약 자체를 받지 않는다. 그 외 시간은 자율 이용.
-  const outsideHours = booking && startBase === null;
+  // 자리 변경은 시간을 바꾸지 않으므로 운영 시간 잠금을 적용하지 않는다.
+  const outsideHours = booking && !changing && startBase === null;
   const hoursText = `예약은 ${String(POLICY.displayOpenHour).padStart(2, "0")}–${String(POLICY.displayCloseHour).padStart(2, "0")}시에만 가능합니다. 그 외 시간은 예약 없이 자유롭게 이용하세요.`;
 
   const blocked = wifiBlocked || outsideHours;
 
   // 자리별 쿨다운: 고른 자리가 내가 방금 쓴 자리라면 그 자리에만 쿨다운이 걸린다(다른 자리는 즉시 가능).
-  const selectedCooldown = selected !== null ? (cooldowns.get(selected) ?? null) : null;
-  const seatCooldownActive = selectedCooldown !== null && now < selectedCooldown;
+  const selectedCooldown =
+    selected !== null ? (cooldowns.get(selected) ?? null) : null;
+  const seatCooldownActive =
+    selectedCooldown !== null && now < selectedCooldown;
 
   // 고른 좌석을 지금 예약할 수 없는 경우의 안내 문구.
+  // 자리 변경은 시간을 바꾸지 않으므로 시간 관련 잠금(운영시간·쿨다운 등)은 적용하지 않는다.
   const panelLocked = wifiBlocked
     ? wifiText
-    : outsideHours
-      ? hoursText
-      : selected === null
-        ? null
-        : seatCooldownActive
-          ? `방금 이용한 자리예요. ${fmtTime(selectedCooldown!)}부터 다시 예약할 수 있습니다. 다른 자리는 지금 바로 가능해요.`
-          : occupiedNow
-            ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
-            : maxMin < POLICY.slotMinutes
-              ? "지금 이 자리는 남은 시간이 없습니다. 다른 자리를 고르거나 잠시 뒤 다시 시도하세요."
-              : null;
+    : changing
+      ? null
+      : outsideHours
+        ? hoursText
+        : selected === null
+          ? null
+          : seatCooldownActive
+            ? `방금 이용한 자리예요. ${fmtTime(selectedCooldown!)}부터 다시 예약할 수 있습니다. 다른 자리는 지금 바로 가능해요.`
+            : occupiedNow
+              ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
+              : maxMin < POLICY.slotMinutes
+                ? "지금 이 자리는 남은 시간이 없습니다. 다른 자리를 고르거나 잠시 뒤 다시 시도하세요."
+                : null;
 
   return (
     <>
@@ -499,9 +568,12 @@ export function ReservePage({ seats, userId }: Props) {
               <div className="flex items-center gap-1.5">
                 <span className="inline-flex items-baseline gap-0.5 rounded-[10px] bg-white/15 px-2.5 py-1.5 leading-none tabular-nums">
                   <span className="text-[16px] font-black">
-                    {seats.find((s) => s.id === mine!.seat_id)?.label ?? mine!.seat_id}
+                    {seats.find((s) => s.id === mine!.seat_id)?.label ??
+                      mine!.seat_id}
                   </span>
-                  <span className="text-[11px] font-bold text-white/60">번</span>
+                  <span className="text-[11px] font-bold text-white/60">
+                    번
+                  </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-white/10 px-3 py-1.5 text-[17px] font-black leading-none tabular-nums">
                   {fmtTime(mineRange.start)}
@@ -510,7 +582,9 @@ export function ReservePage({ seats, userId }: Props) {
                 </span>
               </div>
             ) : (
-              <span className="text-[20px] font-black text-neutral-500">없음</span>
+              <span className="text-[20px] font-black text-neutral-500">
+                없음
+              </span>
             )
           }
         />
@@ -572,7 +646,9 @@ export function ReservePage({ seats, userId }: Props) {
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm md:p-6">
           <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-black tracking-tight text-neutral-900">D-HUB</h2>
+              <h2 className="text-2xl font-black tracking-tight text-neutral-900">
+                D-HUB
+              </h2>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1.5 text-[12px] font-bold tabular-nums text-neutral-500">
                 <Clock className="h-3.5 w-3.5 text-neutral-400" />
                 {String(POLICY.displayOpenHour).padStart(2, "0")}:00–
@@ -639,7 +715,11 @@ export function ReservePage({ seats, userId }: Props) {
             name={coveringRow.name}
             start={coveringRow.start}
             end={coveringRow.end}
-            awayMin={coveringRow.awaySince ? awayMinutes(coveringRow.awaySince, now) : null}
+            awayMin={
+              coveringRow.awaySince
+                ? awayMinutes(coveringRow.awaySince, now)
+                : null
+            }
             now={now}
           />
         ) : (
@@ -652,13 +732,19 @@ export function ReservePage({ seats, userId }: Props) {
             onSubmit={submit}
             busy={busy}
             mode={changing ? "change" : "book"}
+            moveStart={moveRange?.start}
+            moveEnd={moveRange?.end}
             locked={panelLocked}
           />
         )}
       </div>
 
       {reporting && (
-        <ReportDialog userId={userId} seats={seats} onClose={() => setReporting(false)} />
+        <ReportDialog
+          userId={userId}
+          seats={seats}
+          onClose={() => setReporting(false)}
+        />
       )}
 
       {toast && (
