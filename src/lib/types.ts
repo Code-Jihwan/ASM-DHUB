@@ -27,6 +27,7 @@ export type Reservation = {
   extended: boolean;
   status: "active" | "cancelled";
   away_since: string | null;
+  cancelled_at: string | null;
   created_at: string;
 };
 
