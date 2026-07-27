@@ -503,7 +503,9 @@ export function AdminPage({ seats, userId }: Props) {
                 onClick={() => setReportStatus(key)}
                 className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-all ${
                   reportStatus === key
-                    ? "bg-white text-neutral-900 shadow-sm"
+                    ? key === "done"
+                      ? "bg-emerald-600 text-white shadow-sm" // 처리함 = 완료 느낌의 초록
+                      : "bg-white text-neutral-900 shadow-sm"
                     : "text-neutral-500 hover:text-neutral-700"
                 }`}
               >
@@ -570,9 +572,10 @@ export function AdminPage({ seats, userId }: Props) {
                       <button
                         type="button"
                         onClick={() => resolveReport(r.id)}
-                        className="shrink-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-600 transition-all hover:border-neutral-900 hover:text-neutral-900"
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-emerald-500 bg-white px-3.5 py-2 text-xs font-bold text-emerald-600 shadow-sm transition-all hover:bg-emerald-500 hover:text-white"
                       >
-                        처리함
+                        <CheckCircle2 className="h-4 w-4" />
+                        처리 완료
                       </button>
                     )}
                   </div>
