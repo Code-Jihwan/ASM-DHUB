@@ -86,7 +86,7 @@ export default function Login() {
             width={802}
             height={941}
             priority
-            className="pointer-events-none mr-1 w-[108px] shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
+            className="pointer-events-none w-[114px] shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
           />
         </div>
 
