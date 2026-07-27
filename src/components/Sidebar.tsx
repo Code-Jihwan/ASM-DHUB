@@ -49,7 +49,7 @@ function Logo({ height = "h-6" }: { height?: string }) {
         className={`${height} w-auto shrink-0`}
       />
       <span className="h-4 w-px shrink-0 bg-neutral-200" />
-      <h1 className="text-lg font-black tracking-tighter text-neutral-900">@@내자리</h1>
+      <h1 className="text-lg font-black tracking-tighter text-neutral-900">@@자리요</h1>
     </div>
   );
 }

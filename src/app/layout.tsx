@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "@@내자리 · 부산센터 D-HUB 예약",
+  title: "@@자리요 · 부산센터 D-HUB 예약",
   description: "부산센터 D-HUB 48석 좌석 예약",
 };
 

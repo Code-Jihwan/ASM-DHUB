@@ -71,7 +71,7 @@ export default function Login() {
         />
 
         <h1 className="mt-6 text-[28px] font-black leading-tight tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
-          @@내자리
+          @@자리요
         </h1>
         <div className="mt-3.5 flex flex-wrap gap-2 sm:mt-4">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
