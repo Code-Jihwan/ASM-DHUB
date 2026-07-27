@@ -2,6 +2,14 @@
 
 48석 개발공간(D-HUB)을 예약제로 운영하기 위한 웹앱. PC / 모바일 반응형.
 
+## 릴리스 노트 · v1.0.0
+
+<p align="center">
+  <img src="docs/release-note-v1.0.0.png" alt="@@자리요 v1.0.0 릴리스 노트" width="760">
+</p>
+
+> 원본 HTML: [`docs/release-note.html`](docs/release-note.html) — 브라우저에서 열어 인쇄(PDF 저장)할 수 있습니다.
+
 ## 예약 규칙
 
 | 항목 | 값 |

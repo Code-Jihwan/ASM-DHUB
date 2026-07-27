@@ -1,0 +1,205 @@
+<title>@@자리요 v1.0.0 릴리스 노트</title>
+<style>
+  :root{
+    --ink:#0f1e35; --ink-soft:#334660; --muted:#697c96; --faint:#9aa8bd;
+    --line:#e3e9f1; --line-soft:#eef2f7;
+    --accent:#1f5fdd; --accent-2:#0ea5e9; --accent-soft:#eef4ff;
+    --good:#0a8f5b; --good-soft:#e7f6ef;
+    --paper:#ffffff; --backdrop:#e9eef5;
+    --band:linear-gradient(120deg,#0e2f6b 0%,#173f86 48%,#1f5fdd 100%);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--backdrop);
+    color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:24px 16px 48px;
+    line-height:1.5;
+  }
+  .sheet{
+    width:210mm; min-height:297mm;
+    margin:0 auto; background:var(--paper);
+    box-shadow:0 12px 40px rgba(15,30,53,.18);
+    padding:15mm 15mm 12mm;
+    display:flex; flex-direction:column; gap:6.5mm;
+  }
+
+  /* ---- Header band ---- */
+  .head{
+    background:var(--band); color:#fff; border-radius:14px;
+    padding:7mm 8mm; display:flex; justify-content:space-between; align-items:flex-start; gap:8mm;
+    position:relative; overflow:hidden;
+  }
+  .head::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;
+    background:radial-gradient(circle,rgba(14,165,233,.45),transparent 62%);}
+  .brand{display:flex;align-items:center;gap:11px;position:relative;z-index:1;}
+  .logo{width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;
+    font-weight:900;letter-spacing:.5px;font-size:15px;color:#eaf2ff;}
+  .eyebrow{font-size:10px;font-weight:800;letter-spacing:.22em;color:#bcd2ff;text-transform:uppercase;}
+  .title{font-size:26px;font-weight:900;letter-spacing:-.5px;margin:1px 0 0;line-height:1.05;text-wrap:balance;}
+  .subtitle{font-size:11.5px;color:#cfe0ff;margin-top:3px;font-weight:600;}
+  .meta{position:relative;z-index:1;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+  .ver{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#123;border-radius:999px;
+    padding:6px 13px;font-weight:900;font-size:13px;letter-spacing:.2px;}
+  .ver b{color:var(--accent);}
+  .ga{display:inline-block;background:var(--good);color:#fff;border-radius:6px;font-size:9.5px;
+    font-weight:800;letter-spacing:.1em;padding:2px 7px;}
+  .meta .line{font-size:10.5px;color:#c9d9f5;font-weight:600;font-variant-numeric:tabular-nums;}
+
+  /* ---- Section scaffolding ---- */
+  h2{margin:0;font-size:12px;font-weight:900;letter-spacing:-.1px;color:var(--ink);
+    display:flex;align-items:center;gap:8px;}
+  h2::before{content:"";width:8px;height:8px;border-radius:3px;background:var(--accent);flex:none;}
+  .lead{font-size:11.5px;color:var(--ink-soft);margin:0;line-height:1.62;text-wrap:pretty;}
+  .lead b{color:var(--ink);font-weight:800;}
+
+  /* ---- Feature grid ---- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:4.2mm;}
+  .card{border:1px solid var(--line);border-radius:12px;padding:5mm 5.2mm;background:#fff;
+    display:flex;flex-direction:column;gap:2.6mm;}
+  .card h3{margin:0;font-size:11.5px;font-weight:800;color:var(--accent);letter-spacing:-.1px;
+    display:flex;align-items:center;gap:7px;}
+  .tag{font-size:8.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);
+    border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:auto;text-transform:uppercase;}
+  ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2.1mm;}
+  li{position:relative;padding-left:15px;font-size:10.5px;color:var(--ink-soft);line-height:1.42;}
+  li::before{content:"";position:absolute;left:1px;top:6px;width:5px;height:5px;border-radius:1.5px;
+    background:var(--accent-2);}
+  li b{color:var(--ink);font-weight:700;}
+
+  /* ---- Policy + info row ---- */
+  .cols{display:grid;grid-template-columns:1.28fr 1fr;gap:5mm;align-items:start;}
+  table{width:100%;border-collapse:collapse;margin-top:3mm;}
+  td{padding:2.3mm 2mm;border-top:1px solid var(--line-soft);font-size:10.5px;vertical-align:top;}
+  tr:first-child td{border-top:none;}
+  td.k{color:var(--muted);font-weight:700;width:38%;white-space:nowrap;}
+  td.v{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+  td.v em{font-style:normal;color:var(--accent);font-weight:800;}
+  .info{margin-top:3mm;display:flex;flex-direction:column;gap:2.4mm;}
+  .info .row{display:flex;gap:9px;font-size:10.5px;color:var(--ink-soft);line-height:1.4;}
+  .info .row span{color:var(--good);font-weight:900;flex:none;line-height:1.3;}
+  .note{background:var(--accent-soft);border:1px solid #dce8ff;border-radius:10px;padding:3.4mm 4mm;
+    font-size:10px;color:var(--ink-soft);line-height:1.5;margin-top:1mm;}
+  .note b{color:var(--accent);}
+
+  /* ---- Footer ---- */
+  .foot{margin-top:auto;border-top:1.5px solid var(--line);padding-top:4mm;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .foot .f-l{font-size:10px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;}
+  .foot .f-l b{color:var(--ink);font-weight:800;}
+  .foot .f-r{font-size:9.5px;color:var(--faint);font-weight:700;letter-spacing:.03em;}
+
+  .print-btn{position:fixed;right:20px;bottom:20px;z-index:20;background:var(--accent);color:#fff;
+    border:none;border-radius:999px;padding:12px 20px;font-size:13px;font-weight:800;cursor:pointer;
+    box-shadow:0 8px 22px rgba(31,95,221,.4);font-family:inherit;}
+  .print-btn:hover{background:#1a52c0;}
+  .print-btn:focus-visible{outline:3px solid #9dc0ff;outline-offset:2px;}
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .sheet{box-shadow:none;width:auto;min-height:auto;margin:0;padding:12mm 13mm;}
+    .print-btn{display:none;}
+    @page{size:A4;margin:0;}
+  }
+</style>
+
+<div class="sheet">
+  <header class="head">
+    <div class="brand">
+      <div class="logo">ASM</div>
+      <div>
+        <div class="eyebrow">Release Note</div>
+        <h1 class="title">@@자리요</h1>
+        <div class="subtitle">부산센터 D-HUB 좌석 예약 시스템</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="ver"><b>v1.0.0</b></span>
+      <span class="line">릴리스 2026. 07. 27</span>
+      <span class="line">www.asm-dhub.fkii.space</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>개요</h2>
+    <p class="lead" style="margin-top:3mm;">
+      부산센터 D-HUB 개발공간(<b>48석</b>)을 연수생이 웹·모바일에서 직접 예약·관리하는 서비스입니다.
+      <b>실시간 좌석 현황</b>, <b>명단 기반 가입 통제</b>, <b>센터 네트워크 접근 제한</b>,
+      <b>관리자 운영 도구</b>를 갖춘 정식 버전으로 출시합니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>주요 기능</h2>
+    <div class="grid" style="margin-top:3.5mm;">
+      <div class="card">
+        <h3>좌석 예약 · 관리 <span class="tag">Core</span></h3>
+        <ul>
+          <li>48석 <b>실시간 좌석도</b> — 예약 가능·사용 중·자리비움·내 예약·선택됨·사용 불가 6단계 색상 구분</li>
+          <li><b>“지금부터” 예약</b>: 30·60·90·120분 프리셋 + 10분 단위 세부 조정</li>
+          <li>연장(종료 1시간 전, 2시간 1회) · 취소 · <b>자리 변경(시간 유지, 좌석만 이동)</b></li>
+          <li>자리비움 표시 후 <b>20분 미복귀 시 자동 취소</b></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>접근 통제 · 가입 <span class="tag">Security</span></h3>
+        <ul>
+          <li>Google 계정 로그인(OAuth)</li>
+          <li><b>연수생 명단(팀·이름) 대조 가입</b> — 동일 명단 1회 사용으로 <b>1인 다계정 방지</b></li>
+          <li>사무국 직원 <b>예외 가입</b> 처리</li>
+          <li><b>센터 Wi-Fi(공인 IP)</b> 접속 시에만 예약 가능 — 외부 접속 차단</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>관리자 기능 <span class="tag">Admin</span></h3>
+        <ul>
+          <li><b>좌석 점검 잠금</b> — 점검·공사 시 해당 좌석 예약 차단</li>
+          <li><b>연수생 명단 관리</b> — 추가·삭제·검색, 가입 현황, 계정 연결 해제</li>
+          <li>신고 처리(처리 전/완료) · 좌석 이용 이력 조회</li>
+          <li>사용자 <b>관리자 권한</b> 지정·해제</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>신고 · 의견 <span class="tag">Ops</span></h3>
+        <ul>
+          <li>유형별 접수: <b>자리 이용 · 시설 고장 · 기타 의견</b></li>
+          <li>무단 사용 신고 시 대상 좌석·이용자 정보 자동 기록</li>
+          <li>운영시간(08–20시) 외에도 좌석 현황은 상시 열람 가능</li>
+          <li>PC · 모바일 <b>반응형</b> 지원</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>예약 정책</h2>
+      <table>
+        <tr><td class="k">예약 가능 시간</td><td class="v"><em>08:00 – 20:00</em> (그 외 시간은 예약 없이 자유 이용)</td></tr>
+        <tr><td class="k">예약 단위</td><td class="v">10분</td></tr>
+        <tr><td class="k">최대 이용 시간</td><td class="v">2시간 (연장 2시간 1회, 종료 1시간 전부터)</td></tr>
+        <tr><td class="k">동시 보유</td><td class="v">1인 1건</td></tr>
+        <tr><td class="k">재예약 쿨다운</td><td class="v">같은 자리 <em>20분</em> 제한 (10분 이내 취소는 예외)</td></tr>
+        <tr><td class="k">자리비움</td><td class="v">20분 초과 시 자동 취소</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>보안 · 운영</h2>
+      <div class="info">
+        <div class="row"><span>✓</span><div>모든 예약 규칙·권한을 <b>서버(DB)에서 최종 검증</b> — 클라이언트 우회 불가</div></div>
+        <div class="row"><span>✓</span><div>좌석 중복 예약을 <b>데이터베이스 제약으로 원천 차단</b></div></div>
+        <div class="row"><span>✓</span><div>센터 네트워크 <b>IP 기반 접근 제어</b>(서버단 강제)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="f-l">운영 <b>부산센터 사무국</b> &nbsp;·&nbsp; 접속 <b>www.asm-dhub.fkii.space</b> &nbsp;·&nbsp; 릴리스 <b>2026.07.27</b></div>
+    <div class="f-r">ASM · 부산센터 D-HUB</div>
+  </footer>
+</div>
+
+<button class="print-btn" onclick="window.print()">인쇄 / PDF 저장</button>
