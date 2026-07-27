@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Lock, LockOpen, Search, ShieldCheck, ShieldOff } from "lucide-react";
+import { CheckCircle2, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -29,6 +29,15 @@ type Report = {
   kind: "occupancy" | "facility" | "other";
   reported_name: string | null;
   reporter_id: string;
+};
+
+type RosterRow = {
+  id: number;
+  team: string;
+  name: string;
+  claimed: boolean;
+  claimed_email: string | null;
+  claimed_at: string | null;
 };
 
 const REPORT_KIND = {
@@ -93,6 +102,12 @@ export function AdminPage({ seats, userId }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // 연수생 명단
+  const [roster, setRoster] = useState<RosterRow[] | null>(null);
+  const [rosterQuery, setRosterQuery] = useState("");
+  const [newTeam, setNewTeam] = useState("");
+  const [newName, setNewName] = useState("");
+  const [rosterBusy, setRosterBusy] = useState(false);
 
   // 좌석도에 현재 사용 현황을 그린다.
   const fetchOccupancy = useCallback(async () => {
@@ -141,10 +156,75 @@ export function AdminPage({ seats, userId }: Props) {
       }
       setUsers((data ?? []) as AdminUser[]);
     });
+    supabase.rpc("admin_list_roster").then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        // 명단 기능(마이그레이션 0018/0019) 미적용 환경에서도 나머지 화면은 동작하게 둔다.
+        setRoster([]);
+        return;
+      }
+      setRoster((data ?? []) as RosterRow[]);
+    });
     return () => {
       cancelled = true;
     };
   }, [fetchOccupancy, fetchReports, supabase, reloadKey]);
+
+  async function addRoster(e: React.FormEvent) {
+    e.preventDefault();
+    const team = newTeam.trim();
+    const name = newName.trim();
+    if (!team || !name) return;
+    setRosterBusy(true);
+    setError(null);
+    setNotice(null);
+    const { error } = await supabase.from("roster").insert({ team, name });
+    setRosterBusy(false);
+    if (error) {
+      setError(
+        error.code === "23505"
+          ? "이미 명단에 있는 팀·이름입니다."
+          : humanizeDbError(error),
+      );
+      return;
+    }
+    setNewName("");
+    setNotice(`명단에 추가했습니다: ${team} · ${name}`);
+    setReloadKey((k) => k + 1);
+  }
+
+  async function deleteRoster(r: RosterRow) {
+    if (!window.confirm(`명단에서 삭제할까요?\n${r.team} · ${r.name}`)) return;
+    setError(null);
+    setNotice(null);
+    const { error } = await supabase.from("roster").delete().eq("id", r.id);
+    if (error) {
+      setError(humanizeDbError(error));
+      return;
+    }
+    setReloadKey((k) => k + 1);
+  }
+
+  async function resetRosterClaim(r: RosterRow) {
+    if (
+      !window.confirm(
+        `이 명단의 가입 연결을 해제할까요?\n${r.team} · ${r.name}\n해제하면 다른 계정으로 다시 가입할 수 있게 됩니다.`,
+      )
+    )
+      return;
+    setError(null);
+    setNotice(null);
+    const { error } = await supabase
+      .from("roster")
+      .update({ claimed_by: null, claimed_at: null })
+      .eq("id", r.id);
+    if (error) {
+      setError(humanizeDbError(error));
+      return;
+    }
+    setNotice(`잠금을 해제했습니다: ${r.team} · ${r.name}`);
+    setReloadKey((k) => k + 1);
+  }
 
   async function toggleAdmin(u: AdminUser) {
     setSavingUser(u.user_id);
@@ -284,6 +364,12 @@ export function AdminPage({ seats, userId }: Props) {
       u.team.toLowerCase().includes(q),
   );
   const adminCount = (users ?? []).filter((u) => u.is_admin).length;
+
+  const rq = rosterQuery.trim().toLowerCase();
+  const shownRoster = (roster ?? []).filter(
+    (r) => !rq || r.name.toLowerCase().includes(rq) || r.team.toLowerCase().includes(rq),
+  );
+  const rosterClaimed = (roster ?? []).filter((r) => r.claimed).length;
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
@@ -678,6 +764,125 @@ export function AdminPage({ seats, userId }: Props) {
                 </li>
               );
             })}
+          </ul>
+        )}
+      </section>
+
+      <section className={CARD}>
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-black tracking-tight text-neutral-900">
+          연수생 명단
+          <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-bold text-neutral-600 tabular-nums">
+            {roster === null ? "—" : `${roster.length}명`}
+          </span>
+        </h2>
+        <p className="mb-4 text-[13px] font-medium text-neutral-500">
+          명단에 있는 사람만 가입할 수 있습니다. 한 명단은 한 계정에만 연결됩니다.
+          {roster !== null && (
+            <>
+              {" "}
+              가입 {rosterClaimed} · 미가입 {roster.length - rosterClaimed}.
+            </>
+          )}
+        </p>
+
+        {/* 추가 */}
+        <form onSubmit={addRoster} className="mb-4 flex flex-wrap gap-2">
+          <input
+            value={newTeam}
+            onChange={(e) => setNewTeam(e.target.value)}
+            placeholder="팀명"
+            maxLength={40}
+            className="w-32 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm font-bold text-neutral-900 outline-none transition-all placeholder:font-medium placeholder:text-neutral-300 focus:border-neutral-900"
+          />
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="이름"
+            maxLength={40}
+            className="w-32 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm font-bold text-neutral-900 outline-none transition-all placeholder:font-medium placeholder:text-neutral-300 focus:border-neutral-900"
+          />
+          <button
+            type="submit"
+            disabled={rosterBusy || !newTeam.trim() || !newName.trim()}
+            className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+            추가
+          </button>
+        </form>
+
+        <div className="relative mb-4 max-w-sm">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-300" />
+          <input
+            value={rosterQuery}
+            onChange={(e) => setRosterQuery(e.target.value)}
+            placeholder="이름 · 팀 검색"
+            className="w-full rounded-xl border border-neutral-200 bg-white py-2.5 pl-10 pr-4 text-sm font-bold text-neutral-900 outline-none transition-all placeholder:font-medium placeholder:text-neutral-300 focus:border-neutral-900"
+          />
+        </div>
+
+        {roster === null ? (
+          <div className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
+        ) : roster.length === 0 ? (
+          <p className={EMPTY}>
+            아직 명단이 없습니다. 위에서 추가하거나 SQL로 한 번에 넣으세요.
+          </p>
+        ) : shownRoster.length === 0 ? (
+          <p className={EMPTY}>해당하는 명단이 없습니다.</p>
+        ) : (
+          <ul className="scroll-thin flex max-h-[520px] flex-col gap-2 overflow-y-auto">
+            {shownRoster.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 p-3.5"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate text-sm font-black text-neutral-900">{r.name}</span>
+                    <span className="shrink-0 rounded-md bg-neutral-100 px-1.5 py-0.5 text-[11px] font-bold text-neutral-500">
+                      {r.team}
+                    </span>
+                    {r.claimed ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        가입됨
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-md bg-neutral-100 px-1.5 py-0.5 text-[10px] font-bold text-neutral-400">
+                        미가입
+                      </span>
+                    )}
+                  </div>
+                  {r.claimed_email && (
+                    <p className="mt-0.5 truncate text-[11px] font-bold text-neutral-400">
+                      {r.claimed_email}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {r.claimed && (
+                    <button
+                      type="button"
+                      onClick={() => resetRosterClaim(r)}
+                      title="가입 연결 해제"
+                      className="flex items-center gap-1 rounded-xl border border-neutral-200 px-2.5 py-2 text-xs font-bold text-neutral-600 transition-all hover:border-amber-500 hover:text-amber-600"
+                    >
+                      <LockOpen className="h-3.5 w-3.5" />
+                      잠금 해제
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => deleteRoster(r)}
+                    title="명단에서 삭제"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 text-neutral-400 transition-all hover:border-red-500 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </section>
