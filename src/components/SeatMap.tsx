@@ -29,11 +29,11 @@ const TILE =
 
 function tileClass(s: SeatView, selected: boolean, clickable: boolean, away: boolean) {
   if (selected) {
-    return `${TILE} z-10 scale-105 border-neutral-900 bg-neutral-900 text-white shadow-lg ring-2 ring-neutral-900/10`;
+    return `${TILE} z-10 scale-105 border-sky-500 bg-sky-500 text-white shadow-lg ring-2 ring-sky-500/20`;
   }
-  // 점검용으로 잠근 자리. 관리자 화면에선 눌러서 해제할 수 있어 hover를 준다.
+  // 점검용으로 잠근 자리는 검정. 관리자 화면에선 눌러서 해제할 수 있어 hover를 준다.
   if (!s.active) {
-    return `${TILE} border-dashed border-neutral-300 bg-neutral-100 text-neutral-400 ${clickable ? "cursor-pointer hover:border-neutral-500" : "cursor-not-allowed"}`;
+    return `${TILE} border-neutral-900 bg-neutral-900 text-neutral-400 ${clickable ? "cursor-pointer hover:bg-neutral-800" : "cursor-not-allowed"}`;
   }
   if (s.mine) {
     return `${TILE} cursor-default border-emerald-600 bg-emerald-600 text-white shadow-md`;
@@ -180,8 +180,8 @@ const LEGEND = [
   { c: "border-rose-200 bg-rose-100", t: "사용 중" },
   { c: "border-amber-400 bg-amber-100", t: "자리비움" },
   { c: "border-emerald-600 bg-emerald-600", t: "내 예약" },
-  { c: "border-neutral-900 bg-neutral-900 shadow-md", t: "선택됨" },
-  { c: "border-dashed border-neutral-300 bg-neutral-100", t: "사용 불가" },
+  { c: "border-sky-500 bg-sky-500 shadow-md", t: "선택됨" },
+  { c: "border-neutral-900 bg-neutral-900", t: "사용 불가" },
 ];
 
 export function SeatLegend() {
