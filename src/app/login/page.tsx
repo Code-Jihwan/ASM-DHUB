@@ -48,41 +48,44 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent" />
       </div>
 
-      {/* 글래스모피즘 카드. PC에서는 더 크게. */}
-      <div className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/30 bg-white/15 p-8 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:max-w-[500px] sm:p-12">
-        {/* 우측 상단 마스코트. 오른쪽 끝을 카드 안쪽 여백(=구글 버튼 오른쪽 끝)에 맞춘다. */}
+      {/* 글래스모피즘 카드. 좌측에 로고·타이틀·캡슐, 우측에 마스코트. PC에서는 더 크게. */}
+      <div className="relative w-full max-w-[460px] overflow-hidden rounded-[28px] border border-white/30 bg-white/15 p-8 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:max-w-[660px] sm:p-12">
+        {/* 우측 마스코트(말풍선 포함 이미지). 카드 오른쪽에 크게 배치. */}
         <Image
           src="/mascot.png"
           alt=""
-          width={720}
-          height={676}
+          width={1254}
+          height={1254}
           priority
-          className="pointer-events-none absolute right-8 top-2 w-24 select-none drop-shadow-md sm:right-12 sm:top-4 sm:w-32"
+          className="pointer-events-none absolute -right-3 top-1 w-44 select-none drop-shadow-lg sm:right-0 sm:top-2 sm:w-72"
         />
 
-        <Image
-          src="/logo-asm.svg"
-          alt="ASM"
-          width={386}
-          height={140}
-          unoptimized
-          priority
-          className="h-9 w-auto drop-shadow-sm sm:h-11"
-        />
+        {/* 상단 정보. 마스코트와 겹치지 않게 오른쪽 여백을 준다. */}
+        <div className="relative pr-24 sm:pr-52">
+          <Image
+            src="/logo-asm.svg"
+            alt="ASM"
+            width={386}
+            height={140}
+            unoptimized
+            priority
+            className="h-9 w-auto drop-shadow-sm sm:h-11"
+          />
 
-        <h1 className="mt-6 text-[28px] font-black leading-tight tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
-          @@자리요
-        </h1>
-        <div className="mt-3.5 flex flex-wrap gap-2 sm:mt-4">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
-            <MapPin className="h-3.5 w-3.5" />
-            부산센터 D-HUB · 48석
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
-            <Clock className="h-3.5 w-3.5" />
-            예약 {String(POLICY.displayOpenHour).padStart(2, "0")}–
-            {String(POLICY.displayCloseHour).padStart(2, "0")}시
-          </span>
+          <h1 className="mt-6 text-[28px] font-black leading-tight tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
+            @@자리요
+          </h1>
+          <div className="mt-3.5 flex flex-col items-start gap-2 sm:mt-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
+              <MapPin className="h-3.5 w-3.5" />
+              부산센터 D-HUB · 48석
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
+              <Clock className="h-3.5 w-3.5" />
+              예약 {String(POLICY.displayOpenHour).padStart(2, "0")}–
+              {String(POLICY.displayCloseHour).padStart(2, "0")}시
+            </span>
+          </div>
         </div>
 
         <button
