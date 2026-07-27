@@ -60,7 +60,8 @@ const BUCKET_LABEL = {
   cancelled: "취소됨",
 } as const;
 
-const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-6";
+const CARD =
+  "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-6";
 const EMPTY =
   "rounded-2xl border border-dashed border-neutral-200 px-4 py-10 text-center text-sm font-bold text-neutral-400";
 
@@ -70,10 +71,15 @@ export function AdminPage({ seats, userId }: Props) {
 
   const [selected, setSelected] = useState<number | null>(null);
   // 어느 좌석의 이력인지 함께 담아, 로딩 여부를 별도 상태 없이 판별한다.
-  const [history, setHistory] = useState<{ seatId: number; rows: SeatHistoryRow[] } | null>(null);
+  const [history, setHistory] = useState<{
+    seatId: number;
+    rows: SeatHistoryRow[];
+  } | null>(null);
   const [occupancy, setOccupancy] = useState<Occupancy[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
-  const [reportFilter, setReportFilter] = useState<"all" | Report["kind"]>("all");
+  const [reportFilter, setReportFilter] = useState<"all" | Report["kind"]>(
+    "all",
+  );
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [userQuery, setUserQuery] = useState("");
   const [savingUser, setSavingUser] = useState<string | null>(null);
@@ -82,6 +88,7 @@ export function AdminPage({ seats, userId }: Props) {
     () => new Map(seats.map((s) => [s.id, s.active])),
   );
   const [savingSeat, setSavingSeat] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false); // 좌석 이력에서 취소 건을 함께 볼지
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -90,14 +97,18 @@ export function AdminPage({ seats, userId }: Props) {
   const fetchOccupancy = useCallback(async () => {
     const { data } = await supabase
       .from("seat_occupancy")
-      .select("seat_id, user_id, reserver_name, away_since, period, reservation_id, extended");
+      .select(
+        "seat_id, user_id, reserver_name, away_since, period, reservation_id, extended",
+      );
     return (data ?? []) as Occupancy[];
   }, [supabase]);
 
   const fetchReports = useCallback(async () => {
     const { data } = await supabase
       .from("report")
-      .select("id, seat_id, message, resolved, created_at, kind, reported_name, reporter_id")
+      .select(
+        "id, seat_id, message, resolved, created_at, kind, reported_name, reporter_id",
+      )
       .order("created_at", { ascending: false })
       .limit(50);
     return (data ?? []) as Report[];
@@ -116,7 +127,9 @@ export function AdminPage({ seats, userId }: Props) {
       .select("id, active")
       .then(({ data }) => {
         if (cancelled || !data) return;
-        setSeatActive(new Map(data.map((r) => [r.id as number, r.active as boolean])));
+        setSeatActive(
+          new Map(data.map((r) => [r.id as number, r.active as boolean])),
+        );
       });
     supabase.rpc("admin_list_profiles").then(({ data, error }) => {
       if (cancelled) return;
@@ -151,14 +164,16 @@ export function AdminPage({ seats, userId }: Props) {
     if (selected === null) return;
     const seatId = selected;
     let cancelled = false;
-    supabase.rpc("admin_seat_history", { p_seat_id: seatId }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
-        setError(humanizeDbError(error));
-        return;
-      }
-      setHistory({ seatId, rows: (data ?? []) as SeatHistoryRow[] });
-    });
+    supabase
+      .rpc("admin_seat_history", { p_seat_id: seatId })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setError(humanizeDbError(error));
+          return;
+        }
+        setHistory({ seatId, rows: (data ?? []) as SeatHistoryRow[] });
+      });
     return () => {
       cancelled = true;
     };
@@ -217,7 +232,10 @@ export function AdminPage({ seats, userId }: Props) {
   }
 
   async function resolveReport(id: string) {
-    const { error } = await supabase.from("report").update({ resolved: true }).eq("id", id);
+    const { error } = await supabase
+      .from("report")
+      .update({ resolved: true })
+      .eq("id", id);
     if (error) {
       setError(humanizeDbError(error));
       return;
@@ -226,7 +244,9 @@ export function AdminPage({ seats, userId }: Props) {
   }
 
   if (!now) {
-    return <div className="h-[600px] animate-pulse rounded-3xl bg-neutral-200/60" />;
+    return (
+      <div className="h-[600px] animate-pulse rounded-3xl bg-neutral-200/60" />
+    );
   }
 
   const seat = seats.find((s) => s.id === selected);
@@ -241,7 +261,9 @@ export function AdminPage({ seats, userId }: Props) {
     other: openReports.filter((r) => r.kind === "other").length,
   };
   const shownReports =
-    reportFilter === "all" ? reports : reports.filter((r) => r.kind === reportFilter);
+    reportFilter === "all"
+      ? reports
+      : reports.filter((r) => r.kind === reportFilter);
 
   // 신고자 이름은 관리자만 볼 수 있는 사용자 목록에서 찾는다.
   const nameById = new Map((users ?? []).map((u) => [u.user_id, u.name]));
@@ -255,14 +277,20 @@ export function AdminPage({ seats, userId }: Props) {
 
   const q = userQuery.trim().toLowerCase();
   const shownUsers = (users ?? []).filter(
-    (u) => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.team.toLowerCase().includes(q),
+    (u) =>
+      !q ||
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.team.toLowerCase().includes(q),
   );
   const adminCount = (users ?? []).filter((u) => u.is_admin).length;
 
   return (
     <div className="flex flex-col gap-5 md:gap-6">
       <header>
-        <h1 className="text-[28px] font-black tracking-tighter text-neutral-900">관리자</h1>
+        <h1 className="text-[28px] font-black tracking-tighter text-neutral-900">
+          관리자
+        </h1>
         <p className="mt-1 text-sm font-bold text-neutral-500">
           좌석을 누르면 그 자리의 이용 이력이 나옵니다.
         </p>
@@ -345,51 +373,77 @@ export function AdminPage({ seats, userId }: Props) {
             <div className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
           )}
 
-          {seat && !loading && rows?.length === 0 && (
-            <p className={EMPTY}>아직 이 자리를 쓴 기록이 없습니다.</p>
-          )}
-
-          {seat && !loading && rows && rows.length > 0 && (
-            <ul className="scroll-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto">
-              {rows.map((row) => {
-                const { start, end } = parseRange(row.period);
-                const bucket = bucketOf(row, now);
-                return (
-                  <li
-                    key={row.reservation_id}
-                    className={`rounded-2xl border p-4 ${BUCKET_STYLE[bucket]}`}
+          {(() => {
+            if (!seat || loading || !rows) return null;
+            const cancelledCount = rows.filter(
+              (r) => r.status === "cancelled",
+            ).length;
+            const shownRows = showCancelled
+              ? rows
+              : rows.filter((r) => r.status !== "cancelled");
+            return (
+              <>
+                {cancelledCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelled((v) => !v)}
+                    className="mb-3 self-start rounded-lg border border-neutral-200 px-2.5 py-1 text-[12px] font-bold text-neutral-500 transition-all hover:border-neutral-400 hover:text-neutral-700"
                   >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-bold tracking-wider text-neutral-500">
-                        {BUCKET_LABEL[bucket]}
-                      </span>
-                      {row.extended && (
-                        <span className="rounded-md bg-neutral-200 px-1.5 py-0.5 text-[10px] font-bold text-neutral-700">
-                          연장함
-                        </span>
-                      )}
-                      {row.away_since && bucket === "current" && (
-                        <span className="rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                          자리비움
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-[15px] font-black text-neutral-900">
-                      {row.name ?? "(탈퇴한 사용자)"}
-                      {row.team && (
-                        <span className="ml-2 text-[13px] font-bold text-neutral-400">
-                          {row.team}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-[13px] font-bold tabular-nums text-neutral-500">
-                      {fmtDate(start)} {fmtTime(start)} – {fmtTime(end)}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                    {showCancelled
+                      ? "취소 건 숨기기"
+                      : `취소 보기 (${cancelledCount})`}
+                  </button>
+                )}
+                {shownRows.length === 0 ? (
+                  <p className={EMPTY}>
+                    {rows.length === 0
+                      ? "아직 이 자리를 쓴 기록이 없습니다."
+                      : "정상 예약 기록이 없습니다."}
+                  </p>
+                ) : (
+                  <ul className="scroll-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto">
+                    {shownRows.map((row) => {
+                      const { start, end } = parseRange(row.period);
+                      const bucket = bucketOf(row, now);
+                      return (
+                        <li
+                          key={row.reservation_id}
+                          className={`rounded-2xl border p-4 ${BUCKET_STYLE[bucket]}`}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-bold tracking-wider text-neutral-500">
+                              {BUCKET_LABEL[bucket]}
+                            </span>
+                            {row.extended && (
+                              <span className="rounded-md bg-neutral-200 px-1.5 py-0.5 text-[10px] font-bold text-neutral-700">
+                                연장함
+                              </span>
+                            )}
+                            {row.away_since && bucket === "current" && (
+                              <span className="rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                자리비움
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-[15px] font-black text-neutral-900">
+                            {row.name ?? "(탈퇴한 사용자)"}
+                            {row.team && (
+                              <span className="ml-2 text-[13px] font-bold text-neutral-400">
+                                {row.team}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[13px] font-bold tabular-nums text-neutral-500">
+                            {fmtDate(start)} {fmtTime(start)} – {fmtTime(end)}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </>
+            );
+          })()}
         </aside>
       </div>
 
@@ -423,7 +477,9 @@ export function AdminPage({ seats, userId }: Props) {
                 {count > 0 && (
                   <span
                     className={`rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-                      active ? "bg-white/20 text-white" : "bg-red-500 text-white"
+                      active
+                        ? "bg-white/20 text-white"
+                        : "bg-red-500 text-white"
                     }`}
                   >
                     {count}
@@ -475,7 +531,8 @@ export function AdminPage({ seats, userId }: Props) {
                         {r.message}
                       </p>
                       <p className="mt-1 text-[11px] font-bold text-neutral-400">
-                        신고자 {nameById.get(r.reporter_id) ?? "(알 수 없음)"} · {fmtDate(new Date(r.created_at))}{" "}
+                        신고자 {nameById.get(r.reporter_id) ?? "(알 수 없음)"} ·{" "}
+                        {fmtDate(new Date(r.created_at))}{" "}
                         {fmtTime(new Date(r.created_at))}
                       </p>
                     </div>
@@ -504,7 +561,8 @@ export function AdminPage({ seats, userId }: Props) {
           </span>
         </h2>
         <p className="mb-4 text-[13px] font-medium text-neutral-500">
-          로그인한 사용자를 관리자로 지정하거나 해제합니다. 관리자 {adminCount}명.
+          로그인한 사용자를 관리자로 지정하거나 해제합니다. 관리자 {adminCount}
+          명.
         </p>
 
         <div className="relative mb-4 max-w-sm">
@@ -536,7 +594,9 @@ export function AdminPage({ seats, userId }: Props) {
                     </span>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="truncate text-sm font-black text-neutral-900">{u.name}</span>
+                        <span className="truncate text-sm font-black text-neutral-900">
+                          {u.name}
+                        </span>
                         {u.is_admin && (
                           <span className="shrink-0 rounded-md bg-neutral-900 px-1.5 py-0.5 text-[10px] font-bold text-white">
                             관리자
@@ -558,7 +618,11 @@ export function AdminPage({ seats, userId }: Props) {
                     type="button"
                     onClick={() => toggleAdmin(u)}
                     disabled={savingUser === u.user_id || (isMe && u.is_admin)}
-                    title={isMe && u.is_admin ? "본인 권한은 스스로 해제할 수 없습니다" : undefined}
+                    title={
+                      isMe && u.is_admin
+                        ? "본인 권한은 스스로 해제할 수 없습니다"
+                        : undefined
+                    }
                     className={
                       "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40 " +
                       (u.is_admin
