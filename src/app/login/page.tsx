@@ -48,20 +48,20 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent" />
       </div>
 
-      {/* 글래스모피즘 카드. 좌측에 로고·타이틀·캡슐, 우측에 마스코트. PC에서는 더 크게. */}
-      <div className="relative w-full max-w-[460px] overflow-hidden rounded-[28px] border border-white/30 bg-white/15 p-8 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:max-w-[660px] sm:p-12">
-        {/* 우측 마스코트(말풍선 포함 이미지). 카드 오른쪽에 크게 배치. */}
+      {/* 글래스모피즘 카드. 좌측에 로고·타이틀·캡슐, 우측에 마스코트. */}
+      <div className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/30 bg-white/15 p-8 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:max-w-[500px] sm:p-12">
+        {/* 우측 마스코트(말풍선 포함 이미지). 여백을 잘라 캐릭터가 박스를 채운다. */}
         <Image
           src="/mascot.png"
           alt=""
-          width={1254}
-          height={1254}
+          width={802}
+          height={941}
           priority
-          className="pointer-events-none absolute -right-3 top-1 w-44 select-none drop-shadow-lg sm:right-0 sm:top-2 sm:w-72"
+          className="pointer-events-none absolute -right-1 top-1 w-28 select-none drop-shadow-lg sm:right-0 sm:top-2 sm:w-40"
         />
 
         {/* 상단 정보. 마스코트와 겹치지 않게 오른쪽 여백을 준다. */}
-        <div className="relative pr-24 sm:pr-52">
+        <div className="relative pr-24 sm:pr-40">
           <Image
             src="/logo-asm.svg"
             alt="ASM"
