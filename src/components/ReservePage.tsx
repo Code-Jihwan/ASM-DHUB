@@ -537,19 +537,23 @@ export function ReservePage({ seats, userId }: Props) {
     selected !== null ? (cooldowns.get(selected) ?? null) : null;
   const seatCooldownActive =
     selectedCooldown !== null && now < selectedCooldown;
+  // 쿨다운은 예약뿐 아니라 자리 변경(이동)에도 적용된다. 이동으로 우회하는 허점을 막는다.
+  const seatCooldownMsg = seatCooldownActive
+    ? `방금 이용한 자리예요. ${fmtTime(selectedCooldown!)}부터 다시 예약할 수 있습니다. 다른 자리는 지금 바로 가능해요.`
+    : null;
 
   // 고른 좌석을 지금 예약할 수 없는 경우의 안내 문구.
-  // 자리 변경은 시간을 바꾸지 않으므로 시간 관련 잠금(운영시간·쿨다운 등)은 적용하지 않는다.
+  // 자리 변경은 시간을 바꾸지 않으므로 시간 관련 잠금은 안 걸지만, 쿨다운 자리는 이동도 막는다.
   const panelLocked = wifiBlocked
     ? wifiText
     : changing
-      ? null
+      ? seatCooldownMsg
       : outsideHours
         ? hoursText
         : selected === null
           ? null
-          : seatCooldownActive
-            ? `방금 이용한 자리예요. ${fmtTime(selectedCooldown!)}부터 다시 예약할 수 있습니다. 다른 자리는 지금 바로 가능해요.`
+          : seatCooldownMsg
+            ? seatCooldownMsg
             : occupiedNow
               ? "이 자리는 지금 사용 중입니다. 다른 자리를 골라 주세요."
               : maxMin < POLICY.slotMinutes
