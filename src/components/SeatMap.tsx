@@ -1,6 +1,5 @@
 "use client";
 
-import { DoorOpen } from "lucide-react";
 import { awayMinutes } from "@/lib/policy";
 import type { SeatView } from "@/lib/types";
 
@@ -172,13 +171,12 @@ export function SeatMap({
           ))}
         </div>
 
-        {/* 출입문 표시. 41번·48번 앞에 문이 있다. 공간을 적게 차지하도록 작게. */}
-        <div className="grid shrink-0 gap-2" style={{ gridTemplateColumns: COLS }}>
+        {/* 출입문 표시. 41번·48번 앞에 문이 있다. 작은 pill만, 공간 최소화. */}
+        <div className="-mt-1.5 grid shrink-0 gap-2" style={{ gridTemplateColumns: COLS }}>
           {SLOTS.map((col, i) =>
             col === 1 || col === 8 ? (
               <div key={`door-${i}`} className="flex justify-center">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-400">
-                  <DoorOpen className="h-3 w-3" />
+                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-400">
                   출입문
                 </span>
               </div>
