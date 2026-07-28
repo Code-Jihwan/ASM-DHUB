@@ -90,6 +90,7 @@ export function AdminPage({ seats, userId }: Props) {
     "all",
   );
   const [reportStatus, setReportStatus] = useState<"pending" | "done">("pending"); // 처리전 / 처리함
+  const [reportPage, setReportPage] = useState(1); // 신고 목록 페이지(1부터)
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [userQuery, setUserQuery] = useState("");
   const [savingUser, setSavingUser] = useState<string | null>(null);
@@ -345,6 +346,15 @@ export function AdminPage({ seats, userId }: Props) {
     .filter((r) => reportFilter === "all" || r.kind === reportFilter)
     .filter((r) => (reportStatus === "done" ? r.resolved : !r.resolved));
 
+  // 신고 목록 페이지네이션: 5개씩.
+  const REPORT_PAGE_SIZE = 5;
+  const totalReportPages = Math.max(1, Math.ceil(shownReports.length / REPORT_PAGE_SIZE));
+  const reportPageSafe = Math.min(reportPage, totalReportPages);
+  const pageReports = shownReports.slice(
+    (reportPageSafe - 1) * REPORT_PAGE_SIZE,
+    reportPageSafe * REPORT_PAGE_SIZE,
+  );
+
   // 신고자 이름은 관리자만 볼 수 있는 사용자 목록에서 찾는다.
   const nameById = new Map((users ?? []).map((u) => [u.user_id, u.name]));
 
@@ -552,7 +562,10 @@ export function AdminPage({ seats, userId }: Props) {
               <button
                 key={key}
                 type="button"
-                onClick={() => setReportFilter(key)}
+                onClick={() => {
+                  setReportFilter(key);
+                  setReportPage(1);
+                }}
                 className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-all ${
                   active
                     ? "bg-neutral-900 text-white"
@@ -586,7 +599,10 @@ export function AdminPage({ seats, userId }: Props) {
               <button
                 key={key}
                 type="button"
-                onClick={() => setReportStatus(key)}
+                onClick={() => {
+                  setReportStatus(key);
+                  setReportPage(1);
+                }}
                 className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-all ${
                   reportStatus === key
                     ? key === "done"
@@ -609,7 +625,7 @@ export function AdminPage({ seats, userId }: Props) {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {shownReports.map((r) => {
+            {pageReports.map((r) => {
               const s = seats.find((x) => x.id === r.seat_id);
               return (
                 <li
@@ -669,6 +685,26 @@ export function AdminPage({ seats, userId }: Props) {
               );
             })}
           </ul>
+        )}
+
+        {shownReports.length > 0 && totalReportPages > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-1.5">
+            {Array.from({ length: totalReportPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setReportPage(p)}
+                aria-current={p === reportPageSafe ? "page" : undefined}
+                className={`h-9 min-w-9 rounded-xl px-3 text-sm font-bold tabular-nums transition-all ${
+                  p === reportPageSafe
+                    ? "bg-neutral-900 text-white"
+                    : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         )}
       </section>
 
