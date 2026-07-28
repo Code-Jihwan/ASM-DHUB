@@ -172,17 +172,13 @@ export function SeatMap({
           ))}
         </div>
 
-        {/* 출입문 표시. 41번(맨 왼쪽)·48번(맨 오른쪽) 앞에 문이 있다. */}
-        <div
-          className="grid shrink-0 items-start gap-2 px-0"
-          style={{ gridTemplateColumns: COLS }}
-        >
+        {/* 출입문 표시. 41번·48번 앞에 문이 있다. 공간을 적게 차지하도록 작게. */}
+        <div className="grid shrink-0 gap-2" style={{ gridTemplateColumns: COLS }}>
           {SLOTS.map((col, i) =>
             col === 1 || col === 8 ? (
-              <div key={`door-${i}`} className="flex flex-col items-center">
-                <span className="h-2.5 w-[2px] rounded-full bg-neutral-300" />
-                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-bold text-neutral-500 shadow-sm">
-                  <DoorOpen className="h-3.5 w-3.5 text-neutral-400" />
+              <div key={`door-${i}`} className="flex justify-center">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-400">
+                  <DoorOpen className="h-3 w-3" />
                   출입문
                 </span>
               </div>
