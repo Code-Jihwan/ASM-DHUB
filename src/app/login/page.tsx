@@ -83,10 +83,10 @@ export default function Login() {
           <Image
             src="/mascot.png"
             alt=""
-            width={802}
-            height={941}
+            width={601}
+            height={978}
             priority
-            className="pointer-events-none w-24 shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
+            className="pointer-events-none w-24 shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-[128px]"
           />
         </div>
 
