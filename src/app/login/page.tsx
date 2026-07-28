@@ -67,11 +67,11 @@ export default function Login() {
               @@자리요
             </h1>
             <div className="mt-3.5 flex flex-col items-start gap-3.5 sm:mt-4 sm:gap-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/25 bg-white/15 px-2.5 py-1.5 text-[11px] font-bold text-white/90 backdrop-blur-sm sm:px-3 sm:text-xs">
                 <MapPin className="h-3.5 w-3.5" />
                 부산센터 D-HUB · 48석
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/25 bg-white/15 px-2.5 py-1.5 text-[11px] font-bold text-white/90 backdrop-blur-sm sm:px-3 sm:text-xs">
                 <Clock className="h-3.5 w-3.5" />
                 예약 {String(POLICY.displayOpenHour).padStart(2, "0")}–
                 {String(POLICY.displayCloseHour).padStart(2, "0")}시
@@ -86,7 +86,7 @@ export default function Login() {
             width={802}
             height={941}
             priority
-            className="pointer-events-none w-[114px] shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
+            className="pointer-events-none w-24 shrink-0 select-none drop-shadow-lg sm:mr-7 sm:w-44"
           />
         </div>
 
