@@ -63,7 +63,7 @@ export default function Login() {
               className="h-9 w-auto drop-shadow-sm sm:h-11"
             />
 
-            <h1 className="mt-6 text-[28px] font-black leading-none tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[38px]">
+            <h1 className="mt-6 whitespace-nowrap text-[26px] font-black leading-none tracking-tighter text-white drop-shadow-sm sm:mt-8 sm:text-[33px]">
               @@자리요
             </h1>
             <div className="mt-3.5 flex flex-col items-start gap-3.5 sm:mt-4 sm:gap-4">
