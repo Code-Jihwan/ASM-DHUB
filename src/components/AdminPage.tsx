@@ -93,6 +93,7 @@ export function AdminPage({ seats, userId }: Props) {
   const [reportPage, setReportPage] = useState(1); // 신고 목록 페이지(1부터)
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [userQuery, setUserQuery] = useState("");
+  const [userPage, setUserPage] = useState(1); // 사용자 목록 페이지(1부터)
   const [savingUser, setSavingUser] = useState<string | null>(null);
   // 좌석 잠금 상태. props(서버 렌더)를 기본값으로, 잠금/해제 시 갱신한다.
   const [seatActive, setSeatActive] = useState<Map<number, boolean>>(
@@ -374,6 +375,15 @@ export function AdminPage({ seats, userId }: Props) {
       u.team.toLowerCase().includes(q),
   );
   const adminCount = (users ?? []).filter((u) => u.is_admin).length;
+
+  // 사용자 목록 페이지네이션: 5명씩.
+  const USER_PAGE_SIZE = 5;
+  const totalUserPages = Math.max(1, Math.ceil(shownUsers.length / USER_PAGE_SIZE));
+  const userPageSafe = Math.min(userPage, totalUserPages);
+  const pageUsers = shownUsers.slice(
+    (userPageSafe - 1) * USER_PAGE_SIZE,
+    userPageSafe * USER_PAGE_SIZE,
+  );
 
   const rq = rosterQuery.trim().toLowerCase();
   const shownRoster = (roster ?? []).filter(
@@ -724,7 +734,10 @@ export function AdminPage({ seats, userId }: Props) {
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-300" />
           <input
             value={userQuery}
-            onChange={(e) => setUserQuery(e.target.value)}
+            onChange={(e) => {
+              setUserQuery(e.target.value);
+              setUserPage(1);
+            }}
             placeholder="이름 · 이메일 · 팀 검색"
             className="w-full rounded-xl border border-neutral-200 bg-white py-2.5 pl-10 pr-4 text-sm font-bold text-neutral-900 outline-none transition-all placeholder:font-medium placeholder:text-neutral-300 focus:border-neutral-900"
           />
@@ -736,7 +749,7 @@ export function AdminPage({ seats, userId }: Props) {
           <p className={EMPTY}>해당하는 사용자가 없습니다.</p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {shownUsers.map((u) => {
+            {pageUsers.map((u) => {
               const isMe = u.user_id === userId;
               return (
                 <li
@@ -801,6 +814,26 @@ export function AdminPage({ seats, userId }: Props) {
               );
             })}
           </ul>
+        )}
+
+        {shownUsers.length > 0 && totalUserPages > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-1.5">
+            {Array.from({ length: totalUserPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setUserPage(p)}
+                aria-current={p === userPageSafe ? "page" : undefined}
+                className={`h-9 min-w-9 rounded-xl px-3 text-sm font-bold tabular-nums transition-all ${
+                  p === userPageSafe
+                    ? "bg-neutral-900 text-white"
+                    : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         )}
       </section>
 
