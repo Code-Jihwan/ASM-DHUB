@@ -176,7 +176,7 @@ export function SeatMap({
           {SLOTS.map((col, i) =>
             col === 1 || col === 8 ? (
               <div key={`door-${i}`} className="flex justify-center">
-                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-400">
+                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-600">
                   출입문
                 </span>
               </div>
