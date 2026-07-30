@@ -113,7 +113,7 @@ export function AnnouncementPopup() {
       onClick={close}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
     >
-      <div onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[440px]" onClick={(e) => e.stopPropagation()}>
         <NoticeWindow title={ann.title} body={ann.body} onClose={close} />
       </div>
     </div>
