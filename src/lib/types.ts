@@ -50,6 +50,15 @@ export type SeatView = Seat & {
   awaySince: Date | null;
 };
 
+/** 로그인 후 예약 화면에 뜨는 팝업 공지(단일 행, id=1) */
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  active: boolean;
+  updated_at: string;
+};
+
 /** admin_seat_history 반환 행 */
 export type SeatHistoryRow = {
   reservation_id: string;

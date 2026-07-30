@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/AppShell";
 import { ReservePage } from "@/components/ReservePage";
+import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 import type { Seat } from "@/lib/types";
 
 // 로그인 상태에 따라 갈리는 페이지라 정적으로 구우면 안 된다.
@@ -31,6 +32,7 @@ export default async function Home() {
   return (
     <AppShell name={profile.name as string} isAdmin={profile.is_admin as boolean}>
       <ReservePage seats={(seats ?? []) as Seat[]} userId={user.id} />
+      <AnnouncementPopup />
     </AppShell>
   );
 }
