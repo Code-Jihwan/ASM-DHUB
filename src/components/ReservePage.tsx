@@ -323,6 +323,11 @@ export function ReservePage({ seats, userId }: Props) {
 
   // 자리 변경 중이면 기존 예약의 이용 구간. 그 시간에 빈 자리만 옮길 수 있다.
   const moveRange = changing && mine ? parseRange(mine.period) : null;
+  // 이동은 이미 지난 구간을 버리고 지금부터 잡는다(서버도 동일). 남은 구간의 시작을 보여 준다.
+  const moveShownStart =
+    moveRange && now
+      ? new Date(Math.max(now.getTime(), moveRange.start.getTime()))
+      : undefined;
 
   // 좌석도가 비었는지 판정할 구간. 좌석을 고르면 그 이용 구간, 아니면 durationMin 기준.
   const windowLen =
@@ -739,7 +744,7 @@ export function ReservePage({ seats, userId }: Props) {
             onSubmit={submit}
             busy={busy}
             mode={changing ? "change" : "book"}
-            moveStart={moveRange?.start}
+            moveStart={moveShownStart}
             moveEnd={moveRange?.end}
             locked={panelLocked}
           />

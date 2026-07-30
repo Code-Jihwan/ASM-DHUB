@@ -146,7 +146,7 @@ export function ReservationPanel({
           <div className="rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-4">
             <span className="flex items-center gap-2 text-sm font-bold text-neutral-500">
               <Clock className="h-4 w-4 text-neutral-400" />
-              이용 시간 (그대로 유지)
+              남은 이용 시간
             </span>
             <p className="mt-2 text-2xl font-black tabular-nums text-neutral-900">
               {fmtTime(moveStart)} – {fmtTime(moveEnd)}
@@ -161,9 +161,9 @@ export function ReservationPanel({
           <div className="mb-4 flex items-start gap-3 rounded-xl border border-neutral-100 bg-neutral-50 p-3.5">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
             <p className="text-[11px] font-medium leading-relaxed text-neutral-500">
-              이용 시간은 바뀌지 않고{" "}
-              <b className="font-bold text-neutral-700">{seat.label}번 자리</b>
-              로만 옮깁니다.
+              종료 시각은 그대로,{" "}
+              <b className="font-bold text-neutral-700">{seat.label}번 자리</b>로 지금부터 이어서
+              이용합니다.
             </p>
           </div>
           <button
