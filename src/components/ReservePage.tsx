@@ -149,7 +149,7 @@ export function ReservePage({ seats, userId }: Props) {
   const fromMs = startBase?.getTime() ?? 0;
   const toMs = winTo?.getTime() ?? 0;
 
-  // 지금부터 2시간 안의 예약을 한 번에 받아 좌석도·이용시간 계산에 함께 쓴다.
+  // 지금부터 최대 이용 시간(3시간) 안의 예약을 한 번에 받아 좌석도·이용시간 계산에 함께 쓴다.
   useEffect(() => {
     if (!fromMs || !toMs) return;
     let cancelled = false;

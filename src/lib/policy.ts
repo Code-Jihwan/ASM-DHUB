@@ -16,8 +16,8 @@ const REAL_OPEN = 8;
 const REAL_CLOSE = 20;
 
 export const POLICY = {
-  maxBaseHours: 2,
-  maxExtendHours: 2,
+  maxBaseHours: 3,
+  maxExtendHours: 3,
   extendWindowHours: 1,
   bookAheadHours: 12,
   slotMinutes: 10, // 이용 시간 단위(분). DB policy.duration_unit()(600초)와 짝을 이룬다.
