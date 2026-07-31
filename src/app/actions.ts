@@ -27,6 +27,22 @@ export async function bookSeat(seatId: number, period: string): Promise<{ error?
   return error ? { error: humanizeDbError(error) } : {};
 }
 
+/**
+ * 자리비움 표시/복귀. 복귀("복귀했어요")는 센터에 실제로 있어야 인정하므로 IP를 검사한다.
+ * (센터 밖에서 복귀를 눌러 자동 취소를 회피하는 것을 막는다.)
+ * 자리비움 표시(away=true)는 자리를 떠나는 것이라 어디서나 허용한다.
+ */
+export async function setAwayAction(id: string, away: boolean): Promise<{ error?: string }> {
+  if (!away) {
+    const { allowed } = await isCenterRequest();
+    if (!allowed) return { error: "센터 와이파이에 연결한 뒤 복귀 처리할 수 있습니다." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_away", { p_id: id, p_away: away });
+  return error ? { error: humanizeDbError(error) } : {};
+}
+
 /** 자리 변경: 이용 시간은 그대로 두고 자리만 옮긴다. 역시 센터 와이파이에서만. */
 export async function changeSeat(oldId: string, seatId: number): Promise<{ error?: string }> {
   const { allowed } = await isCenterRequest();

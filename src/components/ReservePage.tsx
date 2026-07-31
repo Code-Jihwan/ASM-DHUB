@@ -10,10 +10,10 @@ import {
   WifiOff,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { bookSeat, changeSeat } from "@/app/actions";
+import { bookSeat, changeSeat, setAwayAction } from "@/app/actions";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
-import { useNow } from "@/lib/useNow";
+import { serverEpochMs, serverNow, useNow } from "@/lib/useNow";
 import {
   addMinutes,
   awayMinutes,
@@ -178,7 +178,7 @@ export function ReservePage({ seats, userId }: Props) {
       .then(({ data }) => {
         if (cancelled) return;
         const rows = (data ?? []) as Reservation[];
-        const nowT = Date.now();
+        const nowT = serverEpochMs();
         // 지금 살아있는 내 예약(취소 안 됐고 아직 안 끝난 것)
         const live = rows.find(
           (r) =>
@@ -413,7 +413,7 @@ export function ReservePage({ seats, userId }: Props) {
       }
       // 시작은 제출 시점 기준으로 다시 잡는다(렌더 사이 분이 넘어가면 지난 시간으로 거부됨).
       // 오픈 직전 유예 시간이면 08:00으로 당겨진다.
-      const start = bookingStart(new Date());
+      const start = bookingStart(serverNow());
       if (!start) {
         setBusy(false);
         setError("지금은 예약할 수 있는 시간이 아닙니다.");
@@ -469,10 +469,7 @@ export function ReservePage({ seats, userId }: Props) {
     if (!mine) return;
     setBusy(true);
     setError(null);
-    const { error } = await supabase.rpc("set_away", {
-      p_id: mine.id,
-      p_away: away,
-    });
+    const { error } = await setAwayAction(mine.id, away);
     setBusy(false);
 
     if (error) {

@@ -12,6 +12,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
+import { serverEpochMs } from "@/lib/useNow";
 import type { Seat } from "@/lib/types";
 
 type Props = {
@@ -83,7 +84,7 @@ export function ReportDialog({ userId, seats, onClose }: Props) {
       .select("seat_id, reserver_name, user_id, reservation_id, period")
       .then(({ data }) => {
         if (cancelled) return;
-        const now = Date.now();
+        const now = serverEpochMs();
         const map = new Map<number, Occupant>();
         for (const o of data ?? []) {
           // 지금 실제로 앉아 있는(시작~종료 사이) 예약만. 미래 예약은 제외.
