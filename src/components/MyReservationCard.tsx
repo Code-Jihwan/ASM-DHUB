@@ -62,6 +62,11 @@ export function MyReservationCard({
   // 자동 취소까지 남은 분. 자리비움 20분이 지나면 예약이 사라진다.
   const autoCancelIn = away !== null ? Math.max(0, POLICY.awayLimitMinutes - away) : null;
 
+  // 자리비움 횟수 제한. 한 예약에서 awayMaxCount회까지만(복귀는 세지 않음). 서버에서도 강제한다.
+  // 컬럼이 아직 없을 수 있는 배포 시점을 대비해 기본값 0으로 처리한다.
+  const awayLeft = Math.max(0, POLICY.awayMaxCount - (reservation.away_count ?? 0));
+  const awayExhausted = !isAway && awayLeft <= 0;
+
   const options = extendChoices(end);
   const extendStep = POLICY.slotMinutes;
   const extendMax = options.at(-1) ?? 0; // 연장 가능한 최대 분
@@ -188,7 +193,7 @@ export function MyReservationCard({
             <button
               type="button"
               onClick={() => onAway(away === null)}
-              disabled={busy}
+              disabled={busy || awayExhausted}
               className={
                 away === null
                   ? `${ACTION} col-span-2`
@@ -196,7 +201,11 @@ export function MyReservationCard({
               }
             >
               <Coffee className="h-4 w-4" />
-              {away === null ? "자리비움" : "복귀했어요"}
+              {away === null
+                ? awayExhausted
+                  ? "자리비움 횟수 소진"
+                  : `자리비움 (${awayLeft}회 남음)`
+                : "복귀했어요"}
             </button>
           )}
           <button type="button" onClick={onChange} disabled={busy} className={ACTION}>
@@ -214,16 +223,23 @@ export function MyReservationCard({
           </button>
         </div>
 
-        {/* 자동 취소 안내. 자리비움 중이면 남은 시간을 강조한다. */}
+        {/* 자동 취소 안내. 자리비움 중이면 남은 시간을, 아니면 남은 횟수를 안내한다. */}
         {isAway ? (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-relaxed text-amber-800">
             자리비움 중입니다. <b>{autoCancelIn}분</b> 안에 “복귀했어요”를 누르지 않으면 예약이
             자동으로 취소되고, 이 자리는 이후 {POLICY.cooldownMinutes}분간 다시 예약할 수 없습니다.
           </p>
+        ) : awayExhausted ? (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-relaxed text-amber-800">
+            자리비움 {POLICY.awayMaxCount}회를 모두 사용해 더 이상 자리를 비울 수 없습니다. 오래
+            자리를 비우실 예정이라면 예약을 취소해 주세요.
+          </p>
         ) : (
           <p className="mt-3 text-[11px] font-medium leading-relaxed text-neutral-400">
-            자리를 비운 뒤 {POLICY.awayLimitMinutes}분 안에 “복귀했어요”를 누르지 않으면 예약이
-            자동으로 취소되고, 이 자리는 이후 {POLICY.cooldownMinutes}분간 다시 예약할 수 없습니다.
+            자리비움은 예약당 <b className="font-bold text-neutral-600">{POLICY.awayMaxCount}회</b>
+            까지 쓸 수 있어요(<b className="font-bold text-neutral-600">{awayLeft}회 남음</b>). 비운 뒤{" "}
+            {POLICY.awayLimitMinutes}분 안에 “복귀했어요”를 누르지 않으면 예약이 자동으로 취소되고,
+            이 자리는 이후 {POLICY.cooldownMinutes}분간 다시 예약할 수 없습니다.
           </p>
         )}
 

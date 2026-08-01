@@ -27,6 +27,7 @@ export type Reservation = {
   extended: boolean;
   status: "active" | "cancelled";
   away_since: string | null;
+  away_count: number; // 이 예약에서 자리비움을 누른 횟수(복귀는 세지 않음). DB away_count와 짝.
   cancelled_at: string | null;
   created_at: string;
 };
