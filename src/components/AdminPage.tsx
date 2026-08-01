@@ -74,12 +74,12 @@ const CARD =
 const EMPTY =
   "rounded-2xl border border-dashed border-neutral-200 px-4 py-10 text-center text-sm font-bold text-neutral-400";
 
-// 현재 페이지 주변만 보여 주는 페이지 번호 목록. 사이가 벌어지면 '…'로 접는다.
-// 페이지가 많아도(예: 30) 최대 7개 안팎이라 모바일에서 가로로 넘치지 않는다.
-function pageItems(cur: number, total: number): (number | "ellipsis")[] {
+// 현재 페이지 주변(±siblings)만 보여 주는 페이지 번호 목록. 사이가 벌어지면 '…'로 접는다.
+// siblings로 개수를 조절해 모바일은 좁게, PC는 넉넉히 쓴다.
+function pageItems(cur: number, total: number, siblings: number): (number | "ellipsis")[] {
   const items: (number | "ellipsis")[] = [];
-  const left = Math.max(2, cur - 1);
-  const right = Math.min(total - 1, cur + 1);
+  const left = Math.max(2, cur - siblings);
+  const right = Math.min(total - 1, cur + siblings);
   items.push(1);
   if (left > 2) items.push("ellipsis");
   for (let p = left; p <= right; p++) items.push(p);
@@ -88,10 +88,10 @@ function pageItems(cur: number, total: number): (number | "ellipsis")[] {
   return items;
 }
 
-const PAGER_BTN =
-  "flex h-9 min-w-9 items-center justify-center rounded-xl px-3 text-sm font-bold tabular-nums transition-all";
-
-/** 모바일에서도 넘치지 않는 컴팩트 페이저(화살표 + 현재 주변 번호 + 생략). */
+/**
+ * 반응형 페이저. 모바일은 컴팩트(주변 ±1, 작은 버튼)로 한 줄에 맞추고,
+ * PC는 넉넉히(주변 ±3) 보여 준다. 둘 다 줄바꿈 없이 화살표 + 번호 + 생략.
+ */
 function Pager({
   page,
   total,
@@ -101,23 +101,24 @@ function Pager({
   total: number;
   onPage: (p: number) => void;
 }) {
-  return (
-    <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => onPage(page - 1)}
-        disabled={page <= 1}
-        aria-label="이전 페이지"
-        className={`${PAGER_BTN} bg-neutral-100 text-neutral-500 hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-neutral-100`}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-      {pageItems(page, total).map((it, i) =>
+  const arrow = (dir: -1 | 1, btn: string) => (
+    <button
+      type="button"
+      onClick={() => onPage(page + dir)}
+      disabled={dir < 0 ? page <= 1 : page >= total}
+      aria-label={dir < 0 ? "이전 페이지" : "다음 페이지"}
+      className={`${btn} bg-neutral-100 text-neutral-500 hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-neutral-100`}
+    >
+      {dir < 0 ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+    </button>
+  );
+
+  const row = (siblings: number, btn: string, container: string) => (
+    <div className={container}>
+      {arrow(-1, btn)}
+      {pageItems(page, total, siblings).map((it, i) =>
         it === "ellipsis" ? (
-          <span
-            key={`e${i}`}
-            className="px-0.5 text-sm font-bold text-neutral-300 tabular-nums"
-          >
+          <span key={`e${i}`} className="px-0.5 font-bold text-neutral-300">
             …
           </span>
         ) : (
@@ -126,7 +127,7 @@ function Pager({
             type="button"
             onClick={() => onPage(it)}
             aria-current={it === page ? "page" : undefined}
-            className={`${PAGER_BTN} ${
+            className={`${btn} ${
               it === page
                 ? "bg-neutral-900 text-white"
                 : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
@@ -136,16 +137,19 @@ function Pager({
           </button>
         ),
       )}
-      <button
-        type="button"
-        onClick={() => onPage(page + 1)}
-        disabled={page >= total}
-        aria-label="다음 페이지"
-        className={`${PAGER_BTN} bg-neutral-100 text-neutral-500 hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-neutral-100`}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
+      {arrow(1, btn)}
     </div>
+  );
+
+  const mBtn =
+    "flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 text-[13px] font-bold tabular-nums transition-all";
+  const dBtn =
+    "flex h-9 min-w-9 items-center justify-center rounded-xl px-3 text-sm font-bold tabular-nums transition-all";
+  return (
+    <>
+      {row(1, mBtn, "mt-4 flex items-center justify-center gap-1 text-[13px] sm:hidden")}
+      {row(3, dBtn, "mt-4 hidden items-center justify-center gap-1.5 text-sm sm:flex")}
+    </>
   );
 }
 
