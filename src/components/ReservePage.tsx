@@ -129,14 +129,27 @@ export function ReservePage({ seats, userId }: Props) {
       .catch(() => setOnWifi(null));
   }, []);
 
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
   useEffect(() => {
     checkWifi();
-    const onFocus = () => checkWifi();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [checkWifi]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+    // 창으로 돌아올 때(모바일 잠금 해제·앱 전환 복귀 포함) 서버와 다시 맞춘다.
+    // 백그라운드에 있는 동안 realtime을 놓쳐 취소된 예약이 '유령'으로 남아 좌석맵을
+    // 잠그던 문제를, 복귀 시 전체 재조회(refresh)로 즉시 해소한다.
+    const resync = () => {
+      checkWifi();
+      refresh();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") resync();
+    };
+    window.addEventListener("focus", resync);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", resync);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [checkWifi, refresh]);
 
   // 예약 시작은 늘 "지금 이 분". 최대 이용 시간(2h) 앞의 예약만 알면 충분하다.
   const startBase = now ? bookingStart(now) : null;
@@ -148,6 +161,10 @@ export function ReservePage({ seats, userId }: Props) {
   // 시각 값으로 의존성을 잡아 불필요한 재조회를 막는다.
   const fromMs = startBase?.getTime() ?? 0;
   const toMs = winTo?.getTime() ?? 0;
+
+  // 분이 바뀔 때마다 내 예약을 다시 확인한다. 예약이 끝났거나 서버가 자리비움을
+  // 자동 취소(pg_cron)했는데 realtime 이벤트를 놓친 경우에도 1분 안에 스스로 정리된다.
+  const minuteTick = now ? Math.floor(now.getTime() / 60000) : 0;
 
   // 지금부터 최대 이용 시간(3시간) 안의 예약을 한 번에 받아 좌석도·이용시간 계산에 함께 쓴다.
   useEffect(() => {
@@ -214,7 +231,7 @@ export function ReservePage({ seats, userId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [supabase, userId, refreshKey]);
+  }, [supabase, userId, refreshKey, minuteTick]);
 
   // 좌석 잠금 상태를 받아 온다. 관리자가 점검용으로 잠그면 여기로 반영된다.
   useEffect(() => {
@@ -268,7 +285,12 @@ export function ReservePage({ seats, userId }: Props) {
     [occupancy],
   );
 
-  const hasLive = mine !== null;
+  const mineRange = mine ? parseRange(mine.period) : null;
+  // 서버 시각 기준으로 아직 안 끝난 예약만 '예약 보유'로 본다. 이미 끝났으면 재조회
+  // 전이라도 좌석맵 잠금을 즉시 풀어, 끝난 예약에 갇혀 아무 자리도 못 잡는 상황을 막는다.
+  const hasLive =
+    mine !== null &&
+    !(now !== null && mineRange !== null && mineRange.end.getTime() <= now.getTime());
   const booking = !hasLive || changing;
 
   /**
@@ -404,8 +426,18 @@ export function ReservePage({ seats, userId }: Props) {
 
     let error: string | undefined;
     if (changing) {
+      // 변경하려던 예약이 그 사이 끝났거나 취소됐으면(mine이 비었으면) 조용히 변경 모드를
+      // 빠져나온다. 없는 예약으로 옮기기를 시도해 오류가 나거나 화면이 멈추지 않게 한다.
+      if (!mine) {
+        setBusy(false);
+        setChanging(false);
+        setSelected(null);
+        setError("예약이 종료되어 변경할 수 없습니다. 새로 예약해 주세요.");
+        refresh();
+        return;
+      }
       // 자리 변경은 이용 시간을 그대로 둔 채 자리만 옮긴다(시간 재계산 없음).
-      ({ error } = await changeSeat(mine!.id, selected));
+      ({ error } = await changeSeat(mine.id, selected));
     } else {
       if (effectiveDuration < POLICY.slotMinutes) {
         setBusy(false);
@@ -520,7 +552,6 @@ export function ReservePage({ seats, userId }: Props) {
 
   const chosen = seats.find((s) => s.id === selected);
   const freeCount = view.filter((s) => s.active && !s.busy).length;
-  const mineRange = mine ? parseRange(mine.period) : null;
 
   // 센터 와이파이가 아니면 예약을 막는다(서버에서도 강제). 확인 중(null)엔 막지 않는다.
   const wifiBlocked = booking && onWifi === false;
@@ -573,7 +604,7 @@ export function ReservePage({ seats, userId }: Props) {
           active
           icon={Clock}
           value={
-            mineRange ? (
+            hasLive && mineRange ? (
               <div className="flex items-center gap-1.5">
                 <span className="inline-flex items-baseline gap-0.5 rounded-[10px] bg-white/15 px-2.5 py-1.5 leading-none tabular-nums">
                   <span className="text-[16px] font-black">
