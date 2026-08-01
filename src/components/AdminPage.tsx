@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -73,6 +73,81 @@ const CARD =
   "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-6";
 const EMPTY =
   "rounded-2xl border border-dashed border-neutral-200 px-4 py-10 text-center text-sm font-bold text-neutral-400";
+
+// 현재 페이지 주변만 보여 주는 페이지 번호 목록. 사이가 벌어지면 '…'로 접는다.
+// 페이지가 많아도(예: 30) 최대 7개 안팎이라 모바일에서 가로로 넘치지 않는다.
+function pageItems(cur: number, total: number): (number | "ellipsis")[] {
+  const items: (number | "ellipsis")[] = [];
+  const left = Math.max(2, cur - 1);
+  const right = Math.min(total - 1, cur + 1);
+  items.push(1);
+  if (left > 2) items.push("ellipsis");
+  for (let p = left; p <= right; p++) items.push(p);
+  if (right < total - 1) items.push("ellipsis");
+  if (total > 1) items.push(total);
+  return items;
+}
+
+const PAGER_BTN =
+  "flex h-9 min-w-9 items-center justify-center rounded-xl px-3 text-sm font-bold tabular-nums transition-all";
+
+/** 모바일에서도 넘치지 않는 컴팩트 페이저(화살표 + 현재 주변 번호 + 생략). */
+function Pager({
+  page,
+  total,
+  onPage,
+}: {
+  page: number;
+  total: number;
+  onPage: (p: number) => void;
+}) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => onPage(page - 1)}
+        disabled={page <= 1}
+        aria-label="이전 페이지"
+        className={`${PAGER_BTN} bg-neutral-100 text-neutral-500 hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-neutral-100`}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      {pageItems(page, total).map((it, i) =>
+        it === "ellipsis" ? (
+          <span
+            key={`e${i}`}
+            className="px-0.5 text-sm font-bold text-neutral-300 tabular-nums"
+          >
+            …
+          </span>
+        ) : (
+          <button
+            key={it}
+            type="button"
+            onClick={() => onPage(it)}
+            aria-current={it === page ? "page" : undefined}
+            className={`${PAGER_BTN} ${
+              it === page
+                ? "bg-neutral-900 text-white"
+                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+            }`}
+          >
+            {it}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        onClick={() => onPage(page + 1)}
+        disabled={page >= total}
+        aria-label="다음 페이지"
+        className={`${PAGER_BTN} bg-neutral-100 text-neutral-500 hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-neutral-100`}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 export function AdminPage({ seats, userId }: Props) {
   const supabase = useMemo(() => createClient(), []);
@@ -698,23 +773,7 @@ export function AdminPage({ seats, userId }: Props) {
         )}
 
         {shownReports.length > 0 && totalReportPages > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-1.5">
-            {Array.from({ length: totalReportPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setReportPage(p)}
-                aria-current={p === reportPageSafe ? "page" : undefined}
-                className={`h-9 min-w-9 rounded-xl px-3 text-sm font-bold tabular-nums transition-all ${
-                  p === reportPageSafe
-                    ? "bg-neutral-900 text-white"
-                    : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+          <Pager page={reportPageSafe} total={totalReportPages} onPage={setReportPage} />
         )}
       </section>
 
@@ -817,23 +876,7 @@ export function AdminPage({ seats, userId }: Props) {
         )}
 
         {shownUsers.length > 0 && totalUserPages > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-1.5">
-            {Array.from({ length: totalUserPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setUserPage(p)}
-                aria-current={p === userPageSafe ? "page" : undefined}
-                className={`h-9 min-w-9 rounded-xl px-3 text-sm font-bold tabular-nums transition-all ${
-                  p === userPageSafe
-                    ? "bg-neutral-900 text-white"
-                    : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+          <Pager page={userPageSafe} total={totalUserPages} onPage={setUserPage} />
         )}
       </section>
 
