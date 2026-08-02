@@ -145,7 +145,7 @@ export function SeatMap({
                                 ? "text-white/80"
                                 : isAway
                                   ? "text-amber-800"
-                                  : "text-rose-700")
+                                  : "text-neutral-900")
                             }
                           >
                             {s.reserverName}
