@@ -141,11 +141,7 @@ export function SeatMap({
                           <span
                             className={
                               "max-w-full truncate text-[13px] font-bold leading-none " +
-                              (isSelected || s.mine
-                                ? "text-white/80"
-                                : isAway
-                                  ? "text-amber-800"
-                                  : "text-neutral-900")
+                              (isSelected || s.mine ? "text-white/80" : "text-neutral-900")
                             }
                           >
                             {s.reserverName}
