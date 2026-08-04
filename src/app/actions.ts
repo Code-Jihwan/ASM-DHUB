@@ -4,7 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { humanizeDbError } from "@/lib/errors";
 import { isCenterRequest } from "@/lib/net";
 
-const WIFI_MSG = "센터 와이파이에 연결한 뒤 다시 시도해 주세요.";
+/**
+ * 센터 와이파이가 아니라고 판정됐을 때의 안내.
+ * 감지된 IP를 함께 알려 준다. 센터 안인데도 막히는 경우 이 값을 관리자에게 전달하면
+ * 원인(센터의 다른 회선 IP인지, VPN·릴레이인지)을 바로 가릴 수 있다.
+ */
+function wifiMsg(ip: string, unknown: boolean, action: string): string {
+  if (unknown) return `네트워크 확인에 실패해 ${action}할 수 없습니다. 잠시 후 다시 시도해 주세요.`;
+  return `센터 와이파이에 연결한 뒤 ${action}할 수 있습니다. (감지된 IP: ${ip || "확인 불가"})`;
+}
 
 /**
  * 예약 생성. 센터 와이파이(공인 IP)에서 온 요청만 통과시킨다.
@@ -12,8 +20,8 @@ const WIFI_MSG = "센터 와이파이에 연결한 뒤 다시 시도해 주세�
  * IP 검사를 건너뛸 수 없다. 세션·RLS는 서버 클라이언트가 그대로 적용한다.
  */
 export async function bookSeat(seatId: number, period: string): Promise<{ error?: string }> {
-  const { allowed } = await isCenterRequest();
-  if (!allowed) return { error: WIFI_MSG };
+  const { allowed, ip, unknown } = await isCenterRequest();
+  if (!allowed) return { error: wifiMsg(ip, unknown, "예약") };
 
   const supabase = await createClient();
   const {
@@ -34,8 +42,8 @@ export async function bookSeat(seatId: number, period: string): Promise<{ error?
  */
 export async function setAwayAction(id: string, away: boolean): Promise<{ error?: string }> {
   if (!away) {
-    const { allowed } = await isCenterRequest();
-    if (!allowed) return { error: "센터 와이파이에 연결한 뒤 복귀 처리할 수 있습니다." };
+    const { allowed, ip, unknown } = await isCenterRequest();
+    if (!allowed) return { error: wifiMsg(ip, unknown, "복귀 처리") };
   }
 
   const supabase = await createClient();
@@ -45,8 +53,8 @@ export async function setAwayAction(id: string, away: boolean): Promise<{ error?
 
 /** 자리 변경: 이용 시간은 그대로 두고 자리만 옮긴다. 역시 센터 와이파이에서만. */
 export async function changeSeat(oldId: string, seatId: number): Promise<{ error?: string }> {
-  const { allowed } = await isCenterRequest();
-  if (!allowed) return { error: WIFI_MSG };
+  const { allowed, ip, unknown } = await isCenterRequest();
+  if (!allowed) return { error: wifiMsg(ip, unknown, "자리 이동") };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("change_reservation", {

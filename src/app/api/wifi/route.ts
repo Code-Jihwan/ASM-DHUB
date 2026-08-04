@@ -5,6 +5,8 @@ import { isCenterRequest } from "@/lib/net";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { allowed, enforced } = await isCenterRequest();
-  return NextResponse.json({ allowed, enforced });
+  const { allowed, enforced, ip, unknown } = await isCenterRequest();
+  // ip는 요청자 본인의 공인 IP다. 막혔을 때 원인을 바로 알 수 있게 함께 내려준다.
+  // 허용 목록(CENTER_IPS)은 절대 내려보내지 않는다.
+  return NextResponse.json({ allowed, enforced, ip, unknown });
 }

@@ -109,6 +109,8 @@ export function ReservePage({ seats, userId }: Props) {
   // enforced: CENTER_IPS가 설정돼 제한이 켜졌는지(꺼져 있으면 상태 pill을 숨긴다).
   const [onWifi, setOnWifi] = useState<boolean | null>(null);
   const [wifiEnforced, setWifiEnforced] = useState(false);
+  // 서버가 감지한 내 공인 IP. 센터 안인데 막혔을 때 이 값을 관리자에게 알려 주면 원인이 바로 갈린다.
+  const [wifiIp, setWifiIp] = useState<string>("");
   // 자리별 재예약 쿨다운이 끝나는 시각. seatId → until. 내가 방금 쓴 자리에만 걸린다.
   const [cooldowns, setCooldowns] = useState<Map<number, Date>>(new Map());
   // 좌석 잠금 상태(관리자가 점검용으로 잠글 수 있다). 실시간으로 반영한다.
@@ -125,6 +127,7 @@ export function ReservePage({ seats, userId }: Props) {
       .then((j) => {
         setOnWifi(Boolean(j.allowed));
         setWifiEnforced(Boolean(j.enforced));
+        setWifiIp(typeof j.ip === "string" ? j.ip : "");
       })
       .catch(() => setOnWifi(null));
   }, []);
@@ -554,9 +557,13 @@ export function ReservePage({ seats, userId }: Props) {
   const freeCount = view.filter((s) => s.active && !s.busy).length;
 
   // 센터 와이파이가 아니면 예약을 막는다(서버에서도 강제). 확인 중(null)엔 막지 않는다.
-  const wifiBlocked = booking && onWifi === false;
-  const wifiText =
-    "센터 와이파이에 연결한 뒤 예약할 수 있습니다. 와이파이를 연결하고 다시 확인해 주세요.";
+  // wifiOff는 안내 배너용, wifiBlocked는 예약 차단용으로 나눈다. 이미 예약을 가진 사람도
+  // 복귀·자리이동이 막히므로, 배너와 '다시 확인' 버튼은 예약 보유 여부와 무관하게 보여 준다.
+  const wifiOff = onWifi === false;
+  const wifiBlocked = booking && wifiOff;
+  const wifiText = wifiIp
+    ? `센터 와이파이로 인식되지 않아 예약·자리이동·복귀가 제한됩니다. 센터 안이라면 아래 IP를 관리자에게 알려 주세요. (감지된 IP: ${wifiIp})`
+    : "센터 와이파이에 연결한 뒤 이용할 수 있습니다. 와이파이를 연결하고 다시 확인해 주세요.";
 
   // 지금이 운영 시간(08~20시) 밖이면 예약 자체를 받지 않는다. 그 외 시간은 자율 이용.
   // 자리 변경은 시간을 바꾸지 않으므로 운영 시간 잠금을 적용하지 않는다.
@@ -658,7 +665,7 @@ export function ReservePage({ seats, userId }: Props) {
         </div>
       )}
 
-      {wifiBlocked && (
+      {wifiOff && (
         <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm font-bold text-red-700">
           <span className="flex items-center gap-2.5">
             <Wifi className="h-4 w-4 shrink-0" />
@@ -674,7 +681,7 @@ export function ReservePage({ seats, userId }: Props) {
         </div>
       )}
 
-      {!wifiBlocked && outsideHours && (
+      {!wifiOff && outsideHours && (
         <div className="mb-4 flex shrink-0 items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-bold text-amber-800">
           <Clock className="h-4 w-4 shrink-0" />
           지금은 예약 시간이 아닙니다. {hoursText}
