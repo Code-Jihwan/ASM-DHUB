@@ -35,8 +35,12 @@ export const POLICY = {
   cancelGraceMinutes: 10, // 이 시간 안에 취소하면 쿨다운을 봐준다. DB policy.cancel_grace()와 짝.
 } as const;
 
-/** 이용 시간 빠른 선택 버튼(분). 운영 종료·정책 상한을 넘는 값은 화면에서 걸러 낸다. */
-export const DURATION_PRESETS = [30, 60, 90, 120] as const;
+/**
+ * 이용 시간 빠른 선택 버튼(분). 운영 종료·정책 상한을 넘는 값은 화면에서 걸러 낸다.
+ * 상한(maxBaseHours=3h)까지 버튼 하나로 닿을 수 있게 30분·1·2·3시간으로 둔다.
+ * 1시간 30분처럼 중간 값은 아래 10분 스테퍼로 맞춘다.
+ */
+export const DURATION_PRESETS = [30, 60, 120, 180] as const;
 
 export const TZ = "Asia/Seoul";
 

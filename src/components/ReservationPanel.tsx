@@ -77,7 +77,7 @@ function PanelMessage({
 
 /**
  * "지금부터 몇 분" 예약 패널.
- * 시작은 늘 현재 분(floorMinute). +30/60/90/120분 프리셋과 10분 단위 드롭다운으로 이용 시간을 고른다.
+ * 시작은 늘 현재 분(floorMinute). 30분·1·2·3시간 프리셋과 10분 단위 스테퍼로 이용 시간을 고른다.
  * 최대 이용 시간(maxMin)은 부모가 정책 상한과 좌석의 다음 예약까지 남은 시간을 합쳐 넘겨준다.
  */
 export function ReservationPanel({
