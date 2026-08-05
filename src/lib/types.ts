@@ -60,6 +60,40 @@ export type Announcement = {
   updated_at: string;
 };
 
+/**
+ * admin_stats(p_days) 반환값. 시설 이용 분석 화면이 쓴다.
+ * 값이 null인 것은 "그 기간에 계산할 데이터가 없다"는 뜻이다(0과 구분한다).
+ */
+export type StatsBucket = { bucket: string; cnt: number };
+export type StatsOutcome = { kind: string; cnt: number };
+export type StatsHour = { h: number; avg: number; today: number | null };
+export type StatsSeat = { id: number; label: string; pct: number };
+
+export type StatsPeriod = {
+  /** 하루 예약 건수 */
+  count: number | null;
+  /** 실제 점유 30분 미만이라 평균에서 빠진 건수 */
+  short: number | null;
+  /** 인당 평균 이용 시간(분). 30분 이상인 건만 센다. */
+  minutes: number | null;
+  /** 좌석 이용률(%) */
+  util: number | null;
+};
+
+export type Stats = {
+  /** 비교 기준 시각("HH:MM"). 당일도 평균도 이 시각까지만 센다. */
+  cutoff: string;
+  /** 평균을 낸 날 수(이용이 있었던 날, 당일 제외) */
+  days: number;
+  seats: number;
+  today: StatsPeriod;
+  avg: StatsPeriod;
+  hourly: StatsHour[];
+  seats_pct: StatsSeat[];
+  duration: StatsBucket[];
+  outcome: StatsOutcome[];
+};
+
 /** admin_seat_history 반환 행 */
 export type SeatHistoryRow = {
   reservation_id: string;

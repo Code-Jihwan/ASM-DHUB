@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Map, Megaphone, Settings, User } from "lucide-react";
+import { ChartPie, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -20,8 +20,10 @@ function navItems(isAdmin: boolean): NavItem[] {
     { href: "/me", label: "마이페이지", icon: User },
   ];
   // 관리자가 아니면 눌러도 서버에서 되돌려보내므로 아예 감춘다.
+  // 라벨을 짧게 둔다. 모바일 하단 탭은 폭을 균등 분할해서, 길면 좁은 화면에서 넘친다.
   if (isAdmin) {
     items.push({ href: "/admin", label: "관리자페이지", icon: Settings });
+    items.push({ href: "/stats", label: "이용 분석", icon: ChartPie });
     items.push({ href: "/announcement", label: "팝업 공지", icon: Megaphone });
   }
   return items;
