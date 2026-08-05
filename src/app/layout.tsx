@@ -20,12 +20,14 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full antialiased">
       <head>
-        {/* Pretendard. 시안이 이 폰트를 전제로 자간·굵기를 잡았다. */}
+        {/* Pretendard. 시안이 이 폰트를 전제로 자간·굵기를 잡았다.
+            dynamic-subset은 글자 범위별로 잘라 둔 판이라, 화면에 실제 쓰인 글자 조각만
+            내려받는다. 전체 웨이트를 통째로 받는 static 판(웨이트당 약 790KB)보다 훨씬 가볍다.
+            버전을 고정한다. latest는 예고 없이 바뀌어 자간·글자폭이 흔들릴 수 있다. */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
         <link
           rel="stylesheet"
-          as="style"
-          crossOrigin=""
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v3.2.1/dist/web/static/pretendard.css"
+          href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css"
         />
       </head>
       {/* flex 컬럼으로 두면 자식의 mx-auto가 stretch를 끊고 max-content로 부풀어
