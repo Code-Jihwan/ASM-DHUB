@@ -30,10 +30,17 @@ const RANGES = [
   { days: 0, label: "전체" },
 ];
 
-/** "2026-08-05" → "8월 5일(수)". 서버가 정한 날짜를 그대로 쓰므로 기기 시계와 무관하다. */
-function fmtDay(iso: string): string {
+/**
+ * "2026-08-05" → "8월 5일(수)". 서버가 정한 날짜를 그대로 쓰므로 기기 시계와 무관하다.
+ *
+ * 값이 없어도 죽지 않게 막아 둔다. 코드는 푸시하면 바로 배포되지만 마이그레이션은 손으로
+ * 돌리는 구조라, 그 사이에는 예전 함수(날짜를 안 주는 판)가 응답할 수 있다.
+ * 그때 화면이 하얗게 죽는 것보다 날짜만 빠진 채 나머지를 보여 주는 편이 낫다.
+ */
+function fmtDay(iso: string | null | undefined): string | null {
+  if (typeof iso !== "string") return null;
   const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
+  if (!y || !m || !d) return null;
   const w = "일월화수목금토"[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
   return `${m}월 ${d}일(${w})`;
 }
@@ -246,6 +253,7 @@ export function StatsPage() {
     ...(data?.hourly ?? []).flatMap((x) => [x.avg, x.today ?? 0]),
   );
   const maxSeatPct = Math.max(0, ...(data?.seats_pct ?? []).map((s) => s.pct));
+  const shownDay = fmtDay(data?.day);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -256,7 +264,8 @@ export function StatsPage() {
             {data ? (
               <>
                 <b className="font-bold text-neutral-800">
-                  {data.prev_day ? "어제" : "오늘"} {fmtDay(data.day)}
+                  {data.prev_day ? "어제" : "오늘"}
+                  {shownDay && ` ${shownDay}`}
                 </b>{" "}
                 {data.full_day ? "하루 전체" : `${data.cutoff}까지`}
                 {data.prev_day && " · 오늘은 아직 시작 전이라 어제를 보여줍니다"}
