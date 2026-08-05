@@ -30,6 +30,14 @@ const RANGES = [
   { days: 0, label: "전체" },
 ];
 
+/** "2026-08-05" → "8월 5일(수)". 서버가 정한 날짜를 그대로 쓰므로 기기 시계와 무관하다. */
+function fmtDay(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const w = "일월화수목금토"[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `${m}월 ${d}일(${w})`;
+}
+
 /** 분을 "1시간 20분"처럼 읽기 좋게. */
 function fmtMin(m: number | null): string {
   if (m === null) return "—";
@@ -247,9 +255,20 @@ export function StatsPage() {
           <p className="mt-1 text-[13px] font-medium text-neutral-500">
             {data ? (
               <>
-                {data.cutoff} 기준 · 평균도{" "}
-                <b className="font-bold text-neutral-700">같은 시각까지 누적</b>으로 맞춰
-                비교합니다 · 이용이 있었던 {data.days}일 평균
+                <b className="font-bold text-neutral-800">
+                  {data.prev_day ? "어제" : "오늘"} {fmtDay(data.day)}
+                </b>{" "}
+                {data.full_day ? "하루 전체" : `${data.cutoff}까지`}
+                {data.prev_day && " · 오늘은 아직 시작 전이라 어제를 보여줍니다"}
+                {!data.full_day && (
+                  <>
+                    {" "}
+                    · 평균도 <b className="font-bold text-neutral-700">같은 시각까지</b> 잘라
+                    비교합니다
+                  </>
+                )}
+                {" · "}
+                평균은 이용이 있었던 {data.days}일 기준
               </>
             ) : (
               "불러오는 중…"
@@ -326,7 +345,7 @@ export function StatsPage() {
             {data.today.short !== null && data.today.short > 0 && (
               <>
                 {" "}
-                오늘 {data.today.count}건 중{" "}
+                {data.prev_day ? "어제" : "오늘"} {data.today.count}건 중{" "}
                 <b className="font-bold text-neutral-700">{data.today.short}건</b>이 30분
                 미만(노쇼·조기 이탈)으로 제외됐습니다.
               </>

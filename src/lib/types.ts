@@ -83,6 +83,12 @@ export type StatsPeriod = {
 export type Stats = {
   /** 비교 기준 시각("HH:MM"). 당일도 평균도 이 시각까지만 센다. */
   cutoff: string;
+  /** '당일'로 보여 주는 날짜("YYYY-MM-DD") */
+  day: string;
+  /** 운영 시작 전이라 당일이 어제로 물러났는지 */
+  prev_day: boolean;
+  /** 그 날을 운영 종료까지 다 본 것인지(중간까지가 아니라) */
+  full_day: boolean;
   /** 평균을 낸 날 수(이용이 있었던 날, 당일 제외) */
   days: number;
   seats: number;
