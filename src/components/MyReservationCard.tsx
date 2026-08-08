@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, Coffee, Minus, Pencil, Plus, Timer } from "lucide-react";
+import { Ban, CircleCheck, Coffee, Minus, Pencil, Plus, Timer } from "lucide-react";
 import type { Reservation, Seat } from "@/lib/types";
 import {
   addHours,
@@ -12,6 +12,7 @@ import {
   fmtMinutes,
   fmtTime,
   inExtendWindow,
+  isSeatReturn,
   parseRange,
   POLICY,
 } from "@/lib/policy";
@@ -52,6 +53,8 @@ export function MyReservationCard({
   const [extendMin, setExtendMin] = useState(0);
 
   const running = now >= start && now < end;
+  // 10분 이상 쓰고 그만두면 '좌석 반납', 그 전이면 '예약 취소'. 동작은 같고 이름·안내만 다르다.
+  const isReturn = isSeatReturn(start, now);
   const canExtend = !reservation.extended && inExtendWindow(end, now);
   const opensAt = addHours(end, -POLICY.extendWindowHours);
   const minsLeft = Math.max(0, Math.round((end.getTime() - now.getTime()) / 60000));
@@ -216,10 +219,14 @@ export function MyReservationCard({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className={`${ACTION} hover:border-red-500 hover:text-red-600`}
+            className={
+              isReturn
+                ? `${ACTION} hover:border-emerald-500 hover:text-emerald-700`
+                : `${ACTION} hover:border-red-500 hover:text-red-600`
+            }
           >
-            <Ban className="h-4 w-4" />
-            예약 취소
+            {isReturn ? <CircleCheck className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+            {isReturn ? "좌석 반납" : "예약 취소"}
           </button>
         </div>
 

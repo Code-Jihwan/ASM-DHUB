@@ -107,6 +107,7 @@ export type SeatHistoryRow = {
   extended: boolean;
   status: "active" | "cancelled";
   away_since: string | null;
+  cancelled_at: string | null;
   name: string | null;
   team: string | null;
   created_at: string;

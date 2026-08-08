@@ -16,10 +16,13 @@ const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-
  */
 const RAMP = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#0d366b"];
 const OUTCOME_COLOR: Record<string, string> = {
-  "정상 종료": "#0ca30c",
-  "직접 취소": "#898781",
-  "자리비움 자동취소": "#fab219",
+  "정상 종료": "#0ca30c", // 시간 다 씀(good)
+  "좌석 반납": "#2a78d6", // 쓰고 조기 반납(정상 이용)
+  "예약 취소": "#898781", // 10분 이내 취소(안 씀)
+  "자리비움 자동취소": "#fab219", // 방치로 자동취소(악용·노쇼 신호)
 };
+// 정상 이용 = 시간 다 씀 + 조기 반납. 도넛 가운데에 이 합을 띄운다.
+const PROPER_USE = ["정상 종료", "좌석 반납"];
 const GRID = "#e1e0d9";
 const GOOD_INK = "#006300";
 const BAD_INK = "#d03b3b";
@@ -404,8 +407,11 @@ export function StatsPage() {
                     pct: outPct[i],
                     color: OUTCOME_COLOR[o.kind] ?? RAMP[2],
                   }))}
-                  center={`${outPct[data.outcome.findIndex((o) => o.kind === "정상 종료")] ?? 0}%`}
-                  centerLabel="정상 종료"
+                  center={`${data.outcome.reduce(
+                    (s, o, i) => (PROPER_USE.includes(o.kind) ? s + outPct[i] : s),
+                    0,
+                  )}%`}
+                  centerLabel="정상 이용"
                 />
               )}
             </div>

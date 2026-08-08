@@ -19,6 +19,7 @@ import {
   awayMinutes,
   bookingStart,
   fmtTime,
+  isSeatReturn,
   maxDurationMinutes,
   parseRange,
   POLICY,
@@ -521,6 +522,8 @@ export function ReservePage({ seats, userId }: Props) {
 
   async function cancel() {
     if (!mine) return;
+    // 10분 이상 쓰고 그만두면 '반납', 그 전이면 '취소'. DB 동작은 같고 안내 문구만 다르다.
+    const released = isSeatReturn(parseRange(mine.period).start, serverNow());
     setBusy(true);
     setError(null);
     const { error } = await supabase
@@ -534,7 +537,7 @@ export function ReservePage({ seats, userId }: Props) {
       return;
     }
     refresh();
-    flash("예약을 취소했습니다.");
+    flash(released ? "좌석을 반납했습니다. 이용해 주셔서 감사합니다." : "예약을 취소했습니다.");
   }
 
   if (!now) {

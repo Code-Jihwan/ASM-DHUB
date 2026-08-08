@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MessageSquareWarning } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useNow } from "@/lib/useNow";
-import { fmtDate, fmtMinutes, fmtTime, parseRange } from "@/lib/policy";
+import { fmtDate, fmtMinutes, fmtTime, isSeatReturn, parseRange } from "@/lib/policy";
 import type { Reservation, Seat } from "@/lib/types";
 import { ReportDialog } from "./ReportDialog";
 
@@ -23,7 +23,11 @@ const EMPTY =
 /** 예약 한 건을 지금 기준으로 분류한다. */
 function bucketOf(r: Reservation, now: Date) {
   const { start, end } = parseRange(r.period);
-  if (r.status === "cancelled") return "cancelled" as const;
+  if (r.status === "cancelled") {
+    // 10분 이상 쓰고 그만둔 건 '반납'(정상 이용), 그 전은 '취소'.
+    const at = r.cancelled_at ? new Date(r.cancelled_at) : start;
+    return isSeatReturn(start, at) ? ("returned" as const) : ("cancelled" as const);
+  }
   if (end <= now) return "past" as const;
   if (start <= now) return "current" as const;
   return "upcoming" as const;
@@ -33,6 +37,7 @@ const BUCKET = {
   current: { label: "이용 중", style: "border-emerald-200 bg-emerald-50" },
   upcoming: { label: "예정", style: "border-neutral-900/10 bg-neutral-50" },
   past: { label: "지난 이용", style: "border-neutral-200 bg-white" },
+  returned: { label: "반납함", style: "border-neutral-200 bg-white" },
   cancelled: { label: "취소됨", style: "border-neutral-100 bg-neutral-50/60" },
 } as const;
 
@@ -62,15 +67,21 @@ export function MyPage({ seats, userId, name, team, email }: Props) {
   const labelOf = (seatId: number) =>
     seats.find((s) => s.id === seatId)?.label ?? String(seatId);
 
-  // 취소하지 않은 예약의 실제 경과 시간(분). 취소한 예약은 이용으로 치지 않는다.
+  // 실제로 자리를 점유한 시간(분)의 합. 정상 이용은 시작~지금(또는 종료), 좌석 반납은
+  // 시작~반납 시각을 센다. 짧게 그만둔 '예약 취소'(10분 미만)는 이용으로 치지 않는다.
   const usedMinutes =
     rows && now
-      ? rows
-          .filter((r) => r.status === "active" && parseRange(r.period).start <= now)
-          .reduce((sum, r) => {
-            const { start, end } = parseRange(r.period);
+      ? rows.reduce((sum, r) => {
+          const { start, end } = parseRange(r.period);
+          if (start > now) return sum; // 아직 시작 안 함
+          if (r.status === "active") {
             return sum + (Math.min(end.getTime(), now.getTime()) - start.getTime()) / 60_000;
-          }, 0)
+          }
+          // 취소된 예약: 반납(10분 이상 이용)만 그 이용분을 센다.
+          const at = r.cancelled_at ? new Date(r.cancelled_at) : start;
+          if (!isSeatReturn(start, at)) return sum;
+          return sum + (Math.min(end.getTime(), at.getTime()) - start.getTime()) / 60_000;
+        }, 0)
       : 0;
 
   return (
@@ -110,7 +121,7 @@ export function MyPage({ seats, userId, name, team, email }: Props) {
           </dl>
 
           <p className="mt-3 text-[11px] font-medium leading-relaxed text-neutral-400">
-            취소한 예약은 이용 시간에 포함되지 않습니다.
+            좌석 반납은 실제 이용 시간이 포함되고, 10분 이내에 취소한 예약은 포함되지 않습니다.
           </p>
 
           <p className="mt-4 border-t border-neutral-100 pt-4 text-[11px] font-medium leading-relaxed text-neutral-400">

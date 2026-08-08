@@ -32,7 +32,9 @@ export const POLICY = {
   awayLimitMinutes: 20, // 자리비움 후 이 시간 안에 복귀하지 않으면 예약이 자동 취소된다.
   awayMaxCount: 2, // 한 예약에서 자리비움을 쓸 수 있는 최대 횟수. DB policy.away_max_count()와 짝.
   cooldownMinutes: 20, // 예약 종료 후 이 시간 동안은 그 자리를 다시 예약 불가. DB policy.cooldown()과 짝.
-  cancelGraceMinutes: 10, // 이 시간 안에 취소하면 쿨다운을 봐준다. DB policy.cancel_grace()와 짝.
+  // 취소를 두 가지로 가르는 경계(분). 이 시간 안에 그만두면 '예약 취소'(안 쓴 셈이라 쿨다운
+  // 유예), 이 시간 이상 쓰고 그만두면 '좌석 반납'(정상 이용 + 쿨다운). DB policy.cancel_grace()와 짝.
+  cancelGraceMinutes: 10,
 } as const;
 
 /**
@@ -137,6 +139,15 @@ export function inExtendWindow(end: Date, now: Date): boolean {
 /** 자리비움 경과 분 */
 export function awayMinutes(awaySince: Date, now: Date): number {
   return Math.max(0, Math.floor((now.getTime() - awaySince.getTime()) / MS.min));
+}
+
+/**
+ * 그만둔 예약이 '좌석 반납'인가(=충분히 쓰고 반납). 아니면 '예약 취소'(=짧게 그만둠).
+ * releasedAt은 취소 시각(취소 이력) 또는 지금(카드에서 누르기 직전).
+ * 경계는 cancelGraceMinutes로, DB 쿨다운 유예선과 정확히 같다.
+ */
+export function isSeatReturn(start: Date, releasedAt: Date): boolean {
+  return releasedAt.getTime() - start.getTime() >= POLICY.cancelGraceMinutes * MS.min;
 }
 
 /** PostgreSQL tstzrange 리터럴 */

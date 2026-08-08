@@ -5,7 +5,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Lock, LockOpen, Plus, Search, 
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
-import { fmtDate, fmtTime, parseRange } from "@/lib/policy";
+import { fmtDate, fmtTime, isSeatReturn, parseRange } from "@/lib/policy";
 import type { Occupancy, Seat, SeatHistoryRow, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
 
@@ -49,7 +49,11 @@ const REPORT_KIND = {
 /** 이력 한 건을 지금 기준으로 분류한다. */
 function bucketOf(row: SeatHistoryRow, now: Date) {
   const { start, end } = parseRange(row.period);
-  if (row.status === "cancelled") return "cancelled" as const;
+  if (row.status === "cancelled") {
+    // 10분 이상 쓰고 그만둔 건 '반납'(정상 이용), 그 전은 '취소'.
+    const at = row.cancelled_at ? new Date(row.cancelled_at) : start;
+    return isSeatReturn(start, at) ? ("returned" as const) : ("cancelled" as const);
+  }
   if (end <= now) return "past" as const;
   if (start <= now) return "current" as const;
   return "upcoming" as const;
@@ -59,6 +63,7 @@ const BUCKET_STYLE = {
   current: "border-emerald-200 bg-emerald-50",
   upcoming: "border-neutral-900/10 bg-neutral-50",
   past: "border-neutral-200 bg-white",
+  returned: "border-neutral-200 bg-white",
   cancelled: "border-neutral-100 bg-neutral-50/60",
 } as const;
 
@@ -66,6 +71,7 @@ const BUCKET_LABEL = {
   current: "사용 중",
   upcoming: "예정",
   past: "지난 이용",
+  returned: "반납함",
   cancelled: "취소됨",
 } as const;
 
@@ -560,12 +566,13 @@ export function AdminPage({ seats, userId }: Props) {
 
           {(() => {
             if (!seat || loading || !rows) return null;
-            const cancelledCount = rows.filter(
-              (r) => r.status === "cancelled",
-            ).length;
+            // 반납(정상 이용)은 이력에 그대로 보이고, 진짜 '예약 취소'만 접어 둔다.
+            const isCancelledOnly = (r: SeatHistoryRow) =>
+              now !== null && bucketOf(r, now) === "cancelled";
+            const cancelledCount = rows.filter(isCancelledOnly).length;
             const shownRows = showCancelled
               ? rows
-              : rows.filter((r) => r.status !== "cancelled");
+              : rows.filter((r) => !isCancelledOnly(r));
             return (
               <>
                 {cancelledCount > 0 && (
@@ -583,7 +590,7 @@ export function AdminPage({ seats, userId }: Props) {
                   <p className={EMPTY}>
                     {rows.length === 0
                       ? "아직 이 자리를 쓴 기록이 없습니다."
-                      : "정상 예약 기록이 없습니다."}
+                      : "취소 건만 있습니다. 위에서 펼쳐 보세요."}
                   </p>
                 ) : (
                   <ul className="scroll-thin flex max-h-[420px] flex-col gap-2 overflow-y-auto">
