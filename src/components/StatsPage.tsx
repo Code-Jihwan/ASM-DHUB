@@ -61,11 +61,11 @@ function Donut({
   centerLabel: string;
 }) {
   const R = 54;
-  const SW = 15;
+  const SW = 14;
   const C = 2 * Math.PI * R;
-  // 각진 끝(butt) + 조각 사이 적당한 간격. butt는 밖으로 삐져나오지 않아 간격이 그대로 보인다.
-  // 아주 작은 조각도 최소 길이는 남긴다.
-  const GAP = data.length > 1 ? 6 : 0;
+  // 각진 끝(butt) + 조각 사이 간격. 뒤에 옅은 트랙 링을 깔아, 간격이 흰 절단이 아니라
+  // 은은한 회색 링으로 이어져 보이게 한다. 아주 작은 조각도 최소 길이는 남긴다.
+  const GAP = data.length > 1 ? 5 : 0;
   const segs = data.map((d, i) => {
     const before = (data.slice(0, i).reduce((s, x) => s + x.pct, 0) / 100) * C;
     const len = (d.pct / 100) * C;
@@ -74,8 +74,9 @@ function Donut({
     return { ...d, dash, offset: -(before + (len - dash) / 2) };
   });
   return (
-    <div className="flex items-center gap-5">
-      <svg viewBox="0 0 130 130" className="h-[140px] w-[140px] shrink-0" role="img">
+    <div className="flex items-center gap-4">
+      <svg viewBox="0 0 130 130" className="h-[144px] w-[144px] shrink-0" role="img">
+        <circle cx="65" cy="65" r={R} fill="none" stroke="#eef0f2" strokeWidth={SW} />
         <g transform="translate(65 65) rotate(-90)">
           {segs.map((d) => (
             <circle
@@ -90,24 +91,31 @@ function Donut({
             />
           ))}
         </g>
-        <text x="65" y="62" textAnchor="middle" className="fill-neutral-900 text-[23px] font-black">
+        <text x="65" y="61" textAnchor="middle" className="fill-neutral-900 text-[24px] font-black tracking-tight">
           {center}
         </text>
-        <text x="65" y="79" textAnchor="middle" className="fill-neutral-400 text-[10px] font-bold">
+        <text
+          x="65"
+          y="79"
+          textAnchor="middle"
+          className="fill-neutral-400 text-[10px] font-bold tracking-wide"
+        >
           {centerLabel}
         </text>
       </svg>
-      {/* 범례: 차트 오른쪽 세로 목록, 동그란 점 */}
-      <ul className="min-w-0 flex-1 space-y-2">
+      {/* 범례: 차트 오른쪽 세로 목록. 점을 글자에 바짝 붙인다. */}
+      <ul className="min-w-0 flex-1 space-y-2.5">
         {data.map((d) => (
-          <li key={d.label} className="flex items-center gap-2">
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ background: d.color }}
-              aria-hidden
-            />
-            <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-neutral-700">
-              {d.label}
+          <li key={d.label} className="flex items-center gap-3">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: d.color }}
+                aria-hidden
+              />
+              <span className="min-w-0 truncate text-[12px] font-bold text-neutral-700">
+                {d.label}
+              </span>
             </span>
             <span className="shrink-0 text-[13px] font-black tabular-nums text-neutral-900">
               {d.pct}%
@@ -401,12 +409,9 @@ export function StatsPage() {
           <div className="grid gap-3 md:grid-cols-2 md:gap-6">
             {/* 예약 시간 분포 */}
             <div className={CARD}>
-              <h2 className="mb-1 text-[15px] font-black tracking-tight text-neutral-900">
+              <h2 className="mb-5 text-[15px] font-black tracking-tight text-neutral-900">
                 예약 시간 분포
               </h2>
-              <p className="mb-4 text-[12px] font-medium text-neutral-500">
-                프리셋(30분·1·2·3시간)이 실제 수요와 맞는지 확인
-              </p>
               {data.duration.length === 0 ? (
                 <p className="py-8 text-center text-sm font-bold text-neutral-400">
                   이 기간에 데이터가 없습니다.
@@ -426,10 +431,7 @@ export function StatsPage() {
 
             {/* 종료 유형 */}
             <div className={CARD}>
-              <h2 className="mb-1 text-[15px] font-black tracking-tight text-neutral-900">종료 유형</h2>
-              <p className="mb-4 text-[12px] font-medium text-neutral-500">
-                자리비움 자동취소가 늘면 악용·노쇼 신호
-              </p>
+              <h2 className="mb-5 text-[15px] font-black tracking-tight text-neutral-900">종료 유형</h2>
               {data.outcome.length === 0 ? (
                 <p className="py-8 text-center text-sm font-bold text-neutral-400">
                   이 기간에 데이터가 없습니다.
