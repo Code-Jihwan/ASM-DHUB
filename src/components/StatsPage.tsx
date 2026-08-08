@@ -14,6 +14,15 @@ const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-
  * 색만으로 구분하지 않도록 수치를 늘 함께 적는다.
  */
 const RAMP = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#0d366b"];
+// 예약 시간 분포: 슬라이스를 또렷이 구분하려 검증된 카테고리 5색을 버킷별로 고정한다.
+// (버킷 하나가 비어도 색이 밀리지 않게 이름으로 매핑한다.)
+const DUR_COLOR: Record<string, string> = {
+  "30분 이하": "#2a78d6", // blue
+  "~1시간": "#eb6834", // orange
+  "~2시간": "#1baf7a", // aqua
+  "~3시간": "#eda100", // yellow
+  "3시간 초과": "#4a3aa7", // violet
+};
 // 좌석 히트맵: 저사용은 옅게, 고사용은 진하게. 셀 테두리로 옅은 칸도 또렷하게 구분한다.
 const HEAT = ["#c3daf6", "#8fbdf0", "#4a8ee0", "#2160b6", "#0d366b"];
 const BAR = "#3987e5"; // 시간대별 평균 막대
@@ -54,7 +63,8 @@ function Donut({
   const R = 56;
   const SW = 18;
   const C = 2 * Math.PI * R;
-  const GAP = 3;
+  // 한 조각만 있으면 틈 없이, 여럿이면 아주 얇은 틈(1.5)만 둔다. 큰 틈은 빈 칸처럼 보인다.
+  const GAP = data.length > 1 ? 1.5 : 0;
   const segs = data.map((d, i) => {
     const before = data.slice(0, i).reduce((s, x) => s + x.pct, 0);
     const len = (d.pct / 100) * C;
@@ -111,8 +121,8 @@ function HourlyChart({ hourly, hasToday }: { hourly: StatsHour[]; hasToday: bool
   const maxV = Math.max(0, ...hourly.map((h) => Math.max(h.avg, h.today ?? 0)));
   const yMax = maxV <= 0 ? 10 : Math.max(10, Math.ceil(maxV / 10) * 10);
 
-  const gutterL = 30;
-  const colW = 42;
+  const gutterL = 36;
+  const colW = 46;
   const padX = 6;
   const topPad = 12;
   const plotH = 150;
@@ -145,7 +155,7 @@ function HourlyChart({ hourly, hasToday }: { hourly: StatsHour[]; hasToday: bool
               textAnchor="end"
               className="fill-neutral-400 text-[9px] font-bold"
             >
-              {Math.round(t)}
+              {Math.round(t)}%
             </text>
           </g>
         ))}
@@ -198,7 +208,7 @@ function HourlyChart({ hourly, hasToday }: { hourly: StatsHour[]; hasToday: bool
             textAnchor="middle"
             className="fill-neutral-500 text-[9px] font-bold"
           >
-            {h.h}
+            {h.h}시
           </text>
         ))}
       </svg>
@@ -398,7 +408,7 @@ export function StatsPage() {
                   data={data.duration.map((d: StatsBucket, i) => ({
                     label: d.bucket,
                     pct: durPct[i],
-                    color: RAMP[i] ?? RAMP[RAMP.length - 1],
+                    color: DUR_COLOR[d.bucket] ?? RAMP[2],
                   }))}
                   center={`${data.duration.reduce((s, d) => s + d.cnt, 0)}건`}
                   centerLabel="전체"
@@ -477,7 +487,7 @@ export function StatsPage() {
               </div>
             </div>
             <p className="mb-4 text-[12px] font-medium text-neutral-500">
-              잘 안 쓰이는 자리를 찾아 원인을 확인합니다(출입문 인접·통로·설비 상태)
+              연수생들이 선호하는 좌석을 분석합니다.
             </p>
             <div className="scroll-thin overflow-x-auto">
               <div className="min-w-[560px] space-y-4 rounded-[20px] bg-floor p-3">
