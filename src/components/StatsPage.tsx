@@ -14,24 +14,23 @@ const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-
  * 색만으로 구분하지 않도록 수치를 늘 함께 적는다.
  */
 const RAMP = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#0d366b"];
-// 예약 시간 분포: 슬라이스를 또렷이 구분하려 검증된 카테고리 5색을 버킷별로 고정한다.
-// (버킷 하나가 비어도 색이 밀리지 않게 이름으로 매핑한다.)
+// 예약 시간 분포: 짧음→긺을 옅은 파랑→진한 남색 순차 램프로. 버킷 이름으로 고정 매핑한다.
 const DUR_COLOR: Record<string, string> = {
-  "30분 이하": "#2a78d6", // blue
-  "~1시간": "#eb6834", // orange
-  "~2시간": "#1baf7a", // aqua
-  "~3시간": "#eda100", // yellow
-  "3시간 초과": "#4a3aa7", // violet
+  "30분 이하": "#84b4ee",
+  "~1시간": "#5b8fe0",
+  "~2시간": "#3457c9",
+  "~3시간": "#232085",
+  "3시간 초과": "#0e1026",
 };
 // 좌석 히트맵: 저사용은 옅게, 고사용은 진하게. 셀 테두리로 옅은 칸도 또렷하게 구분한다.
 const HEAT = ["#c3daf6", "#8fbdf0", "#4a8ee0", "#2160b6", "#0d366b"];
 const BAR = "#3987e5"; // 시간대별 평균 막대
 const TODAY = "#0f172a"; // 오늘 곡선
 const OUTCOME_COLOR: Record<string, string> = {
-  "정상 종료": "#0ca30c",
-  "좌석 반납": "#2a78d6",
-  "예약 취소": "#898781",
-  "자리비움 자동취소": "#fab219",
+  "정상 종료": "#35b877",
+  "좌석 반납": "#3b82f6",
+  "예약 취소": "#9aa2ae",
+  "자리비움 자동취소": "#e5484d",
 };
 const PROPER_USE = ["정상 종료", "좌석 반납"];
 const GRID = "#e1e0d9";
@@ -60,53 +59,88 @@ function Donut({
   center: string;
   centerLabel: string;
 }) {
+  const [hover, setHover] = useState<number | null>(null);
   const R = 54;
-  const SW = 14;
+  const SW = 16;
   const C = 2 * Math.PI * R;
-  // 각진 끝(butt) + 조각 사이 간격. 뒤에 옅은 트랙 링을 깔아, 간격이 흰 절단이 아니라
-  // 은은한 회색 링으로 이어져 보이게 한다. 아주 작은 조각도 최소 길이는 남긴다.
-  const GAP = data.length > 1 ? 5 : 0;
+  // 끝을 둥글게(round) + 조각 사이 간격. 뒤에 옅은 트랙 링을 깔아 간격이 은은한 링으로 이어지게.
+  // 작은 조각도 최소 길이는 남겨 둥근 알약처럼 보이게 한다.
+  const GAP = data.length > 1 ? 16 : 0;
   const segs = data.map((d, i) => {
-    const before = (data.slice(0, i).reduce((s, x) => s + x.pct, 0) / 100) * C;
+    const beforePct = data.slice(0, i).reduce((s, x) => s + x.pct, 0);
+    const before = (beforePct / 100) * C;
     const len = (d.pct / 100) * C;
     const dash = Math.max(3, len - GAP);
-    // 남는 여백을 양쪽에 반씩 둬 조각을 제 구간 가운데에 놓는다.
-    return { ...d, dash, offset: -(before + (len - dash) / 2) };
+    // 툴팁 위치: 조각 가운데 각도의 링 위 점(SVG 130 박스 기준 %).
+    const ang = ((-90 + ((beforePct + d.pct / 2) / 100) * 360) * Math.PI) / 180;
+    const tipX = ((65 + R * Math.cos(ang)) / 130) * 100;
+    const tipY = ((65 + R * Math.sin(ang)) / 130) * 100;
+    return { ...d, dash, offset: -(before + (len - dash) / 2), tipX, tipY };
   });
+
+  // 가운데 숫자: 앞의 숫자는 크게, 뒤 단위(건 등)는 작게.
+  const m = /^([\d,.]+)(.*)$/.exec(center);
+  const num = m ? m[1] : center;
+  const unit = m ? m[2] : "";
+
   return (
     <div className="flex items-center gap-4">
-      <svg viewBox="0 0 130 130" className="h-[144px] w-[144px] shrink-0" role="img">
-        <circle cx="65" cy="65" r={R} fill="none" stroke="#eef0f2" strokeWidth={SW} />
-        <g transform="translate(65 65) rotate(-90)">
-          {segs.map((d) => (
-            <circle
-              key={d.label}
-              r={R}
-              fill="none"
-              stroke={d.color}
-              strokeWidth={SW}
-              strokeLinecap="butt"
-              strokeDasharray={`${d.dash} ${C}`}
-              strokeDashoffset={d.offset}
-            />
-          ))}
-        </g>
-        <text x="65" y="61" textAnchor="middle" className="fill-neutral-900 text-[24px] font-black tracking-tight">
-          {center}
-        </text>
-        <text
-          x="65"
-          y="79"
-          textAnchor="middle"
-          className="fill-neutral-400 text-[10px] font-bold tracking-wide"
-        >
-          {centerLabel}
-        </text>
-      </svg>
+      <div className="relative shrink-0">
+        <svg viewBox="0 0 130 130" className="h-[148px] w-[148px]" role="img">
+          <circle cx="65" cy="65" r={R} fill="none" stroke="#eef0f2" strokeWidth={SW} />
+          <g transform="translate(65 65) rotate(-90)">
+            {segs.map((d, i) => (
+              <circle
+                key={d.label}
+                r={R}
+                fill="none"
+                stroke={d.color}
+                strokeWidth={SW}
+                strokeLinecap="round"
+                strokeDasharray={`${d.dash} ${C}`}
+                strokeDashoffset={d.offset}
+                opacity={hover === null || hover === i ? 1 : 0.35}
+                style={{ cursor: "pointer", transition: "opacity .15s" }}
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+              />
+            ))}
+          </g>
+          <text x="65" y="62" textAnchor="middle" className="fill-neutral-900 font-black tracking-tight">
+            <tspan className="text-[24px]">{num}</tspan>
+            {unit && <tspan className="text-[14px]">{unit}</tspan>}
+          </text>
+          <text
+            x="65"
+            y="80"
+            textAnchor="middle"
+            className="fill-neutral-400 text-[10px] font-bold tracking-wide"
+          >
+            {centerLabel}
+          </text>
+        </svg>
+        {hover !== null && (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-[12px] font-black tabular-nums shadow-md ring-1 ring-black/5"
+            style={{
+              left: `${segs[hover].tipX}%`,
+              top: `${segs[hover].tipY}%`,
+              color: segs[hover].color,
+            }}
+          >
+            비율 : {segs[hover].pct}%
+          </div>
+        )}
+      </div>
       {/* 범례: 차트 오른쪽 세로 목록. 점을 글자에 바짝 붙인다. */}
       <ul className="min-w-0 flex-1 space-y-2.5">
-        {data.map((d) => (
-          <li key={d.label} className="flex items-center gap-3">
+        {data.map((d, i) => (
+          <li
+            key={d.label}
+            className="flex items-center gap-3"
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(null)}
+          >
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -423,7 +457,7 @@ export function StatsPage() {
                     pct: durPct[i],
                     color: DUR_COLOR[d.bucket] ?? RAMP[2],
                   }))}
-                  center={`${data.duration.reduce((s, d) => s + d.cnt, 0)}건`}
+                  center={`${data.duration.reduce((s, d) => s + d.cnt, 0).toLocaleString()}건`}
                   centerLabel="전체"
                 />
               )}
