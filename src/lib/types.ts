@@ -61,39 +61,25 @@ export type Announcement = {
 };
 
 /**
- * admin_stats(p_days) 반환값. 시설 이용 분석 화면이 쓴다.
+ * admin_stats(p_from, p_to) 반환값. 시설 이용 분석 화면이 쓴다.
  * 값이 null인 것은 "그 기간에 계산할 데이터가 없다"는 뜻이다(0과 구분한다).
  */
 export type StatsBucket = { bucket: string; cnt: number };
 export type StatsOutcome = { kind: string; cnt: number };
+/** 시간대별 좌석 점유율(%). avg=완료된 날 평균, today=오늘 실제(미래 시간대·과거범위는 null) */
 export type StatsHour = { h: number; avg: number; today: number | null };
 export type StatsSeat = { id: number; label: string; pct: number };
 
-export type StatsPeriod = {
-  /** 하루 예약 건수 */
-  count: number | null;
-  /** 실제 점유 30분 미만이라 평균에서 빠진 건수 */
-  short: number | null;
-  /** 인당 평균 이용 시간(분). 30분 이상인 건만 센다. */
-  minutes: number | null;
-  /** 좌석 이용률(%) */
-  util: number | null;
-};
-
 export type Stats = {
-  /** 비교 기준 시각("HH:MM"). 당일도 평균도 이 시각까지만 센다. */
-  cutoff: string;
-  /** '당일'로 보여 주는 날짜("YYYY-MM-DD") */
-  day: string;
-  /** 운영 시작 전이라 당일이 어제로 물러났는지 */
-  prev_day: boolean;
-  /** 그 날을 운영 종료까지 다 본 것인지(중간까지가 아니라) */
-  full_day: boolean;
-  /** 평균을 낸 날 수(이용이 있었던 날, 당일 제외) */
+  /** 집계 범위 시작("YYYY-MM-DD") */
+  from: string;
+  /** 집계 범위 끝("YYYY-MM-DD") */
+  to: string;
+  /** 평균을 낸 날 수(범위 안에서 이용이 있었던 날, 오늘 제외) */
   days: number;
   seats: number;
-  today: StatsPeriod;
-  avg: StatsPeriod;
+  /** 오늘을 곡선·도넛에 포함했는지(범위가 오늘까지 닿을 때만) */
+  include_today: boolean;
   hourly: StatsHour[];
   seats_pct: StatsSeat[];
   duration: StatsBucket[];
