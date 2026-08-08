@@ -60,21 +60,23 @@ function Donut({
   center: string;
   centerLabel: string;
 }) {
-  const R = 56;
-  const SW = 18;
+  const R = 54;
+  const SW = 14;
   const C = 2 * Math.PI * R;
-  // 한 조각만 있으면 틈 없이, 여럿이면 아주 얇은 틈(1.5)만 둔다. 큰 틈은 빈 칸처럼 보인다.
-  const GAP = data.length > 1 ? 1.5 : 0;
+  // 끝을 둥글게(round cap) 하면 양 끝이 SW/2 만큼 밖으로 삐져나온다. 겹치지 않게 조각 사이를
+  // SW 이상 벌린다. 아주 작은 조각도 최소 길이는 남겨 둥근 알약처럼 보이게 한다.
+  const GAP = data.length > 1 ? 18 : 0;
   const segs = data.map((d, i) => {
-    const before = data.slice(0, i).reduce((s, x) => s + x.pct, 0);
+    const before = (data.slice(0, i).reduce((s, x) => s + x.pct, 0) / 100) * C;
     const len = (d.pct / 100) * C;
-    return { ...d, dash: Math.max(0, len - GAP), offset: -(before / 100) * C };
+    const dash = Math.max(3, len - GAP);
+    // 남는 여백을 양쪽에 반씩 둬 조각을 제 구간 가운데에 놓는다.
+    return { ...d, dash, offset: -(before + (len - dash) / 2) };
   });
   return (
-    <div className="flex flex-wrap items-center gap-5">
-      <svg viewBox="0 0 140 140" className="h-[140px] w-[140px] shrink-0" role="img">
-        <g transform="translate(70 70) rotate(-90)">
-          <circle r={R} fill="none" stroke={GRID} strokeWidth={SW} />
+    <div className="flex flex-col items-center gap-5">
+      <svg viewBox="0 0 130 130" className="h-[150px] w-[150px]" role="img">
+        <g transform="translate(65 65) rotate(-90)">
           {segs.map((d) => (
             <circle
               key={d.label}
@@ -82,23 +84,29 @@ function Donut({
               fill="none"
               stroke={d.color}
               strokeWidth={SW}
-              strokeDasharray={`${d.dash} ${C - d.dash}`}
+              strokeLinecap="round"
+              strokeDasharray={`${d.dash} ${C}`}
               strokeDashoffset={d.offset}
             />
           ))}
         </g>
-        <text x="70" y="66" textAnchor="middle" className="fill-neutral-900 text-[22px] font-black">
+        <text x="65" y="62" textAnchor="middle" className="fill-neutral-900 text-[24px] font-black">
           {center}
         </text>
-        <text x="70" y="84" textAnchor="middle" className="fill-neutral-400 text-[10px] font-bold">
+        <text x="65" y="80" textAnchor="middle" className="fill-neutral-400 text-[10px] font-bold">
           {centerLabel}
         </text>
       </svg>
-      <ul className="min-w-0 flex-1 space-y-2">
+      {/* 범례: 차트 아래 2열, 동그란 점 */}
+      <ul className="grid w-full grid-cols-2 gap-x-6 gap-y-2.5">
         {data.map((d) => (
-          <li key={d.label} className="flex items-center gap-2.5">
-            <span className="h-3 w-3 shrink-0 rounded-[3px]" style={{ background: d.color }} aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-neutral-600">
+          <li key={d.label} className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: d.color }}
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-neutral-700">
               {d.label}
             </span>
             <span className="shrink-0 text-[13px] font-black tabular-nums text-neutral-900">
