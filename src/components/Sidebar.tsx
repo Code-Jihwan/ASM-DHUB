@@ -43,7 +43,11 @@ async function signOut() {
  */
 function Logo({ height = "h-6" }: { height?: string }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <Link
+      href="/"
+      aria-label="@@자리요 좌석 예약"
+      className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20"
+    >
       <Image
         src="/logo-asm.svg"
         alt="ASM"
@@ -55,7 +59,7 @@ function Logo({ height = "h-6" }: { height?: string }) {
       />
       <span className="h-4 w-px shrink-0 bg-neutral-200" />
       <h1 className="text-lg font-black tracking-tighter text-neutral-900">@@자리요</h1>
-    </div>
+    </Link>
   );
 }
 
