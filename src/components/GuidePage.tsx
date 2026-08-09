@@ -2,12 +2,12 @@ import {
   ArrowRightLeft,
   Clock,
   Coffee,
-  DoorOpen,
   Hand,
   LayoutGrid,
   MapPin,
   MousePointerClick,
   Sun,
+  Timer,
   Undo2,
   Wifi,
 } from "lucide-react";
@@ -36,19 +36,31 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
+/** 아이콘 색. 앱 좌석 범례에 이미 쓰는 색(sky·emerald·amber)만 골라 톤을 맞춘다. */
+const TONES = {
+  neutral: "bg-white text-neutral-900 ring-neutral-200",
+  sky: "bg-sky-50 text-sky-600 ring-sky-100",
+  emerald: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+  amber: "bg-amber-50 text-amber-600 ring-amber-100",
+} as const;
+
 /** 핵심 3가지 · 예약 관리 등에 쓰는 아이콘 + 제목 + 설명 블록 */
 function Feature({
   icon: Icon,
   title,
+  tone = "neutral",
   children,
 }: {
   icon: LucideIcon;
   title: string;
+  tone?: keyof typeof TONES;
   children: React.ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-neutral-900 shadow-sm ring-1 ring-neutral-200">
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-sm ring-1 ${TONES[tone]}`}
+      >
         <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
       </div>
       <p className="mt-3 text-[15px] font-black tracking-tight text-neutral-900">{title}</p>
@@ -156,14 +168,16 @@ export function GuidePage() {
       <section className={CARD}>
         <h2 className={H2}>먼저, 이 3가지만 기억하세요</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <Feature icon={Wifi} title="센터 안에서만 예약">
-            센터 와이파이에 연결돼 있어야 예약·복귀 버튼이 눌립니다. 집·밖에서는 화면 확인만 돼요.
+          <Feature icon={Wifi} title="센터 안에서만 예약" tone="sky">
+            센터 와이파이에 연결돼 있어야 예약·복귀 버튼이 눌립니다. 집·밖에서는 화면 확인만 됩니다.
           </Feature>
-          <Feature icon={Clock} title="지금부터, 최대 3시간">
-            미래 예약이 아니라 “지금부터 몇 분”을 고릅니다. 08–20시 사이, 최대 3시간(+연장 3시간).
+          <Feature icon={Clock} title="지금부터, 최대 3시간" tone="amber">
+            미리 잡아두는 방식이 아니라 지금 바로 시작합니다. 한 번에 최대 3시간까지 예약하고, 필요하면
+            3시간 더 연장할 수 있습니다. 운영 시간은 08–20시입니다.
           </Feature>
-          <Feature icon={LayoutGrid} title="한 번에 한 자리">
-            동시에 1자리만. 다 쓰면 자동으로 끝나거나 반납하고, 다른 자리를 새로 잡으면 됩니다.
+          <Feature icon={LayoutGrid} title="한 번에 한 자리" tone="emerald">
+            동시에 1자리만 쓸 수 있습니다. 다 쓰면 자동으로 끝나거나 반납한 뒤, 다른 자리를 새로 잡으면
+            됩니다.
           </Feature>
         </div>
       </section>
@@ -192,9 +206,9 @@ export function GuidePage() {
             예약하면 시작 시각을 08:00으로 맞춰 예약해 줍니다. 조금 일찍 와도 걱정 마세요.
           </p>
           <p className={NOTE}>
-            <DoorOpen className="mr-1.5 inline h-4 w-4 -translate-y-0.5 text-neutral-400" />
-            <b className="font-bold text-neutral-800">출입문 자리</b> — 도면의 41번·48번 자리 앞은
-            출입문입니다. 드나듦이 잦은 자리예요.
+            <Timer className="mr-1.5 inline h-4 w-4 -translate-y-0.5 text-neutral-400" />
+            <b className="font-bold text-neutral-800">바로 이어서 쓸 때</b> — 예약 시간이 끝난 자리는
+            20분간 다시 예약할 수 없습니다. 계속 이용하려면 다른 빈 자리를 골라 주세요.
           </p>
         </div>
       </section>
