@@ -46,7 +46,7 @@ function Logo({ height = "h-6" }: { height?: string }) {
     <Link
       href="/"
       aria-label="@@자리요 좌석 예약"
-      className="flex items-center gap-2.5 rounded-lg transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20"
+      className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20"
     >
       <Image
         src="/logo-asm.svg"
