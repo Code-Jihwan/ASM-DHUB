@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartPie, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
+import { BookOpen, ChartPie, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,6 +17,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 function navItems(isAdmin: boolean): NavItem[] {
   const items: NavItem[] = [
     { href: "/", label: "좌석 예약", icon: Map },
+    { href: "/guide", label: "사용 방법", icon: BookOpen },
     { href: "/me", label: "마이페이지", icon: User },
   ];
   // 관리자가 아니면 눌러도 서버에서 되돌려보내므로 아예 감춘다.
