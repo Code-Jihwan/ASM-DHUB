@@ -25,8 +25,8 @@ const DUR_COLOR: Record<string, string> = {
 // 좌석 히트맵: 저사용은 옅게, 고사용은 진하게. 셀 테두리로 옅은 칸도 또렷하게 구분한다.
 const HEAT = ["#c3daf6", "#8fbdf0", "#4a8ee0", "#2160b6", "#0d366b"];
 const BAR = "#3987e5"; // 시간대별 평균 막대
-const WEEKDAY_BAR = "#6366f1"; // 요일별 가로 막대 (인디고)
-const WEEKDAY_MAX = "#4338ca"; // 요일별에서 가장 붐빈 요일 강조(진한 인디고)
+const WEEKDAY_BAR = "#3987e5"; // 요일별 가로 막대 (페이지 전체와 통일된 파랑)
+const WEEKDAY_MAX = "#1c5cab"; // 요일별에서 가장 붐빈 요일 강조(진한 파랑)
 const TODAY = "#0f172a"; // 오늘 곡선
 const OUTCOME_COLOR: Record<string, string> = {
   "정상 종료": "#35b877",
