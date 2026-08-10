@@ -241,7 +241,7 @@ const WEEKDAY_LABEL = ["", "월", "화", "수", "목", "금", "토", "일"];
 function WeekdayChart({ data }: { data: StatsWeekday[] }) {
   const max = Math.max(1, ...data.map((d) => d.avg)); // 0 나눗셈 방지
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {data.map((d) => {
         const w = Math.round((d.avg / max) * 100);
         const isMax = d.avg === max;
@@ -249,22 +249,25 @@ function WeekdayChart({ data }: { data: StatsWeekday[] }) {
         return (
           <div key={d.dow} className="flex items-center gap-3">
             <span
-              className={`w-4 shrink-0 text-[12px] font-black ${
-                weekend ? "text-neutral-300" : "text-neutral-400"
+              className={`w-5 shrink-0 text-center text-[13px] font-black ${
+                weekend ? "text-neutral-300" : "text-neutral-500"
               }`}
             >
               {WEEKDAY_LABEL[d.dow]}
             </span>
             <div
-              className="h-5 flex-1 overflow-hidden rounded-md bg-neutral-100"
+              className="h-8 flex-1 overflow-hidden rounded-lg bg-neutral-100"
               title={`${WEEKDAY_LABEL[d.dow]}요일 · 평균 ${d.avg}명`}
             >
               <div
-                className="h-full rounded-md"
-                style={{ width: `${Math.max(w, 2)}%`, background: isMax ? BAR_MAX : BAR }}
+                className="h-full rounded-lg"
+                style={{ width: `${Math.max(w, 3)}%`, background: isMax ? BAR_MAX : BAR }}
               />
             </div>
-            <span className="w-8 shrink-0 text-right text-[13px] font-black tabular-nums text-neutral-900">
+            <span
+              className="w-9 shrink-0 text-right text-[15px] font-black tabular-nums text-neutral-900"
+              style={isMax ? { color: BAR_MAX } : undefined}
+            >
               {d.avg}
             </span>
           </div>
