@@ -24,8 +24,9 @@ const DUR_COLOR: Record<string, string> = {
 };
 // 좌석 히트맵: 저사용은 옅게, 고사용은 진하게. 셀 테두리로 옅은 칸도 또렷하게 구분한다.
 const HEAT = ["#c3daf6", "#8fbdf0", "#4a8ee0", "#2160b6", "#0d366b"];
-const BAR = "#3987e5"; // 시간대별 평균 막대 · 요일별 가로 막대
-const BAR_MAX = "#1c5cab"; // 요일별에서 가장 붐빈 요일 강조
+const BAR = "#3987e5"; // 시간대별 평균 막대
+const WEEKDAY_BAR = "#6366f1"; // 요일별 가로 막대 (인디고)
+const WEEKDAY_MAX = "#4338ca"; // 요일별에서 가장 붐빈 요일 강조(진한 인디고)
 const TODAY = "#0f172a"; // 오늘 곡선
 const OUTCOME_COLOR: Record<string, string> = {
   "정상 종료": "#35b877",
@@ -261,14 +262,15 @@ function WeekdayChart({ data }: { data: StatsWeekday[] }) {
             >
               <div
                 className="h-full rounded-lg"
-                style={{ width: `${Math.max(w, 3)}%`, background: isMax ? BAR_MAX : BAR }}
+                style={{ width: `${Math.max(w, 3)}%`, background: isMax ? WEEKDAY_MAX : WEEKDAY_BAR }}
               />
             </div>
             <span
-              className="w-9 shrink-0 text-right text-[15px] font-black tabular-nums text-neutral-900"
-              style={isMax ? { color: BAR_MAX } : undefined}
+              className="w-11 shrink-0 text-right text-[15px] font-black tabular-nums text-neutral-900"
+              style={isMax ? { color: WEEKDAY_MAX } : undefined}
             >
               {d.avg}
+              <span className="ml-0.5 text-[11px] font-bold text-neutral-400">명</span>
             </span>
           </div>
         );
@@ -454,12 +456,9 @@ export function StatsPage() {
           {/* 요일별 이용 인원 (마이그레이션 0030 적용 후에만 나타난다) */}
           {data.weekday && (
             <div className={`${CARD} mb-3 md:mb-6`}>
-              <h2 className="mb-1 text-[15px] font-black tracking-tight text-neutral-900">
+              <h2 className="mb-4 text-[15px] font-black tracking-tight text-neutral-900">
                 요일별 이용 인원
               </h2>
-              <p className="mb-4 text-[12px] font-medium text-neutral-500">
-                요일별 하루 평균 이용 인원 · 동일 인원 중복 이용은 1명으로 집계
-              </p>
 
               <div className="mb-5 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
                 <div className="rounded-2xl bg-neutral-50 px-4 py-3">
