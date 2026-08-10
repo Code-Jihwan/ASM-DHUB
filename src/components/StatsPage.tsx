@@ -3,8 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
+import { fmtMinutes } from "@/lib/policy";
 import { useNow } from "@/lib/useNow";
-import type { Stats, StatsBucket, StatsHour, StatsOutcome, StatsWeekday } from "@/lib/types";
+import type {
+  Stats,
+  StatsBucket,
+  StatsHour,
+  StatsOutcome,
+  StatsTopUser,
+  StatsWeekday,
+} from "@/lib/types";
 
 const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-6";
 
@@ -484,6 +492,44 @@ export function StatsPage() {
                 </p>
               ) : (
                 <WeekdayChart data={data.weekday} />
+              )}
+            </div>
+          )}
+
+          {/* 이용 시간이 많은 연수생 TOP 5 (마이그레이션 0031 적용 후에만 나타난다) */}
+          {data.top_users && (
+            <div className={`${CARD} mb-3 md:mb-6`}>
+              <h2 className="mb-4 text-[15px] font-black tracking-tight text-neutral-900">
+                이용 시간이 많은 연수생 TOP 5
+              </h2>
+              {data.top_users.length === 0 ? (
+                <p className="py-8 text-center text-sm font-bold text-neutral-400">
+                  이 기간에 데이터가 없습니다.
+                </p>
+              ) : (
+                <ol className="space-y-2">
+                  {data.top_users.map((u: StatsTopUser, i) => (
+                    <li
+                      key={`${u.name}-${i}`}
+                      className="flex items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3"
+                    >
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-black ${
+                          i === 0 ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-500"
+                        }`}
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-black text-neutral-900">{u.name}</p>
+                        <p className="truncate text-[12px] font-bold text-neutral-400">{u.team}</p>
+                      </div>
+                      <span className="shrink-0 text-[14px] font-black tabular-nums text-neutral-900">
+                        {fmtMinutes(u.minutes)}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
               )}
             </div>
           )}

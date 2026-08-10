@@ -71,6 +71,8 @@ export type StatsHour = { h: number; avg: number; today: number | null };
 export type StatsSeat = { id: number; label: string; pct: number };
 /** 요일별 하루 평균 이용 인원. dow=1(월)~7(일), avg=완료된 날 기준 하루 평균 인원 */
 export type StatsWeekday = { dow: number; avg: number };
+/** 이용 시간이 많은 연수생. minutes=선택 기간 누적 좌석 점유 시간(분) */
+export type StatsTopUser = { name: string; team: string; minutes: number };
 
 export type Stats = {
   /** 집계 범위 시작("YYYY-MM-DD") */
@@ -91,6 +93,8 @@ export type Stats = {
   users_avg?: number;
   /** 요일별 하루 평균 이용 인원(dow 1~7) */
   weekday?: StatsWeekday[];
+  /** 이용 시간이 많은 연수생 TOP 5(마이그레이션 0031 적용 후에만 온다) */
+  top_users?: StatsTopUser[];
   hourly: StatsHour[];
   seats_pct: StatsSeat[];
   duration: StatsBucket[];
