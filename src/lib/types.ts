@@ -69,6 +69,8 @@ export type StatsOutcome = { kind: string; cnt: number };
 /** 시간대별 좌석 점유율(%). avg=완료된 날 평균, today=오늘 실제(미래 시간대·과거범위는 null) */
 export type StatsHour = { h: number; avg: number; today: number | null };
 export type StatsSeat = { id: number; label: string; pct: number };
+/** 요일별 하루 평균 이용 인원. dow=1(월)~7(일), avg=완료된 날 기준 하루 평균 인원 */
+export type StatsWeekday = { dow: number; avg: number };
 
 export type Stats = {
   /** 집계 범위 시작("YYYY-MM-DD") */
@@ -80,6 +82,15 @@ export type Stats = {
   seats: number;
   /** 오늘을 곡선·도넛에 포함했는지(범위가 오늘까지 닿을 때만) */
   include_today: boolean;
+  /* 아래 이용 인원 지표는 마이그레이션 0030 적용 후에만 온다(배포-마이그레이션 시차 대비 optional). */
+  /** 지금 이 순간 좌석을 점유 중인 인원(날짜 범위와 무관, 항상 '지금') */
+  current_users?: number;
+  /** 선택 기간에 한 번이라도 이용한 고유 인원(오늘 포함) */
+  users_total?: number;
+  /** 하루 평균 이용 인원(완료된 날 기준) */
+  users_avg?: number;
+  /** 요일별 하루 평균 이용 인원(dow 1~7) */
+  weekday?: StatsWeekday[];
   hourly: StatsHour[];
   seats_pct: StatsSeat[];
   duration: StatsBucket[];

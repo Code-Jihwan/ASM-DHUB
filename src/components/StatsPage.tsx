@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
-import type { Stats, StatsBucket, StatsHour, StatsOutcome } from "@/lib/types";
+import type { Stats, StatsBucket, StatsHour, StatsOutcome, StatsWeekday } from "@/lib/types";
 
 const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-6";
 
@@ -235,6 +235,90 @@ function HourlyChart({ hourly, hasToday }: { hourly: StatsHour[]; hasToday: bool
   );
 }
 
+/* ── 요일별 평균 이용 인원 (막대) ─────────────────────────── */
+const WEEKDAY_LABEL = ["", "월", "화", "수", "목", "금", "토", "일"];
+function WeekdayChart({ data }: { data: StatsWeekday[] }) {
+  const maxV = Math.max(0, ...data.map((d) => d.avg));
+  const yMax = maxV <= 0 ? 5 : Math.max(5, Math.ceil(maxV / 5) * 5);
+
+  const gutterL = 26;
+  const colW = 48;
+  const padX = 8;
+  const topPad = 20; // 막대 위 값 라벨 자리
+  const plotH = 150;
+  const xLabelH = 22;
+  const W = gutterL + data.length * colW + 8;
+  const H = topPad + plotH + xLabelH;
+  const yTo = (v: number) => topPad + plotH * (1 - v / yMax);
+  const cx = (i: number) => gutterL + i * colW + colW / 2;
+  const ticks = [0, yMax / 2, yMax];
+
+  return (
+    <div className="scroll-thin overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full min-w-[440px]"
+        role="img"
+        aria-label="요일별 평균 이용 인원"
+      >
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={gutterL} x2={W} y1={yTo(t)} y2={yTo(t)} stroke={GRID} strokeWidth={1} />
+            <text
+              x={gutterL - 6}
+              y={yTo(t) + 3}
+              textAnchor="end"
+              className="fill-neutral-400 text-[9px] font-bold"
+            >
+              {Math.round(t)}
+            </text>
+          </g>
+        ))}
+
+        {data.map((d, i) => {
+          const y = yTo(d.avg);
+          return (
+            <g key={d.dow}>
+              <rect
+                x={gutterL + i * colW + padX}
+                y={y}
+                width={colW - 2 * padX}
+                height={Math.max(0, topPad + plotH - y)}
+                rx={4}
+                fill={BAR}
+              >
+                <title>
+                  {WEEKDAY_LABEL[d.dow]}요일 · 평균 {d.avg}명
+                </title>
+              </rect>
+              <text
+                x={cx(i)}
+                y={y - 6}
+                textAnchor="middle"
+                className="fill-neutral-700 text-[10px] font-black tabular-nums"
+              >
+                {d.avg}
+              </text>
+            </g>
+          );
+        })}
+
+        {data.map((d, i) => (
+          <text
+            key={d.dow}
+            x={cx(i)}
+            y={topPad + plotH + 15}
+            textAnchor="middle"
+            className="fill-neutral-500 text-[10px] font-bold"
+          >
+            {WEEKDAY_LABEL[d.dow]}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 /* ── 좌석 히트맵 ────────────────────────────────────────── */
 const COLS = "repeat(3, 1fr) 0.45fr repeat(2, 1fr) 0.45fr repeat(3, 1fr)";
 const SLOTS = [1, 2, 3, null, 4, 5, null, 6, 7, 8] as const;
@@ -409,6 +493,61 @@ export function StatsPage() {
         </div>
       ) : data ? (
         <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+          {/* 요일별 이용 인원 (마이그레이션 0030 적용 후에만 나타난다) */}
+          {data.weekday && (
+            <div className={`${CARD} mb-3 md:mb-6`}>
+              <h2 className="mb-1 text-[15px] font-black tracking-tight text-neutral-900">
+                요일별 이용 인원
+              </h2>
+              <p className="mb-4 text-[12px] font-medium text-neutral-500">
+                그날 개발공간을 이용한 고유 인원(한 명이 여러 번 써도 1명) · 요일별 하루 평균
+              </p>
+
+              <div className="mb-5 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
+                <div className="rounded-2xl bg-neutral-50 px-4 py-3">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                    현재 이용 중
+                  </p>
+                  <p className="mt-0.5 text-[20px] font-black tabular-nums text-neutral-900">
+                    {data.current_users ?? 0}
+                    <span className="ml-0.5 text-[13px] font-bold text-neutral-500">명</span>
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 px-4 py-3">
+                  <p className="text-[11px] font-bold text-neutral-400">하루 평균</p>
+                  <p className="mt-0.5 text-[20px] font-black tabular-nums text-neutral-900">
+                    {data.users_avg ?? 0}
+                    <span className="ml-0.5 text-[13px] font-bold text-neutral-500">명</span>
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 px-4 py-3">
+                  <p className="text-[11px] font-bold text-neutral-400">기간 내 이용 인원</p>
+                  <p className="mt-0.5 text-[20px] font-black tabular-nums text-neutral-900">
+                    {data.users_total ?? 0}
+                    <span className="ml-0.5 text-[13px] font-bold text-neutral-500">명</span>
+                  </p>
+                </div>
+              </div>
+
+              {(data.users_total ?? 0) === 0 ? (
+                <p className="py-8 text-center text-sm font-bold text-neutral-400">
+                  이 기간에 데이터가 없습니다.
+                </p>
+              ) : (
+                <>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded-[3px]" style={{ background: BAR }} aria-hidden />
+                    <span className="text-[11px] font-bold text-neutral-600">
+                      평균 이용 인원(명)
+                    </span>
+                  </div>
+                  <WeekdayChart data={data.weekday} />
+                </>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-3 md:grid-cols-2 md:gap-6">
             {/* 예약 시간 분포 */}
             <div className={CARD}>
