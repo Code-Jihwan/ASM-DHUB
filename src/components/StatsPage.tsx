@@ -500,7 +500,7 @@ export function StatsPage() {
           {data.top_users && (
             <div className={`${CARD} mb-3 md:mb-6`}>
               <h2 className="mb-4 text-[15px] font-black tracking-tight text-neutral-900">
-                이용 시간이 많은 연수생 TOP 5
+                D-HUB 이용 시간 순위 TOP 5
               </h2>
               {data.top_users.length === 0 ? (
                 <p className="py-8 text-center text-sm font-bold text-neutral-400">
