@@ -25,8 +25,6 @@ const DUR_COLOR: Record<string, string> = {
 // 좌석 히트맵: 저사용은 옅게, 고사용은 진하게. 셀 테두리로 옅은 칸도 또렷하게 구분한다.
 const HEAT = ["#c3daf6", "#8fbdf0", "#4a8ee0", "#2160b6", "#0d366b"];
 const BAR = "#3987e5"; // 시간대별 평균 막대
-const WEEKDAY_BAR = "#3987e5"; // 요일별 가로 막대 (페이지 전체와 통일된 파랑)
-const WEEKDAY_MAX = "#1c5cab"; // 요일별에서 가장 붐빈 요일 강조(진한 파랑)
 const TODAY = "#0f172a"; // 오늘 곡선
 const OUTCOME_COLOR: Record<string, string> = {
   "정상 종료": "#35b877",
@@ -242,35 +240,35 @@ const WEEKDAY_LABEL = ["", "월", "화", "수", "목", "금", "토", "일"];
 function WeekdayChart({ data }: { data: StatsWeekday[] }) {
   const max = Math.max(1, ...data.map((d) => d.avg)); // 0 나눗셈 방지
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-5">
       {data.map((d) => {
         const w = Math.round((d.avg / max) * 100);
-        const isMax = d.avg === max;
-        const weekend = d.dow >= 6;
+        const isMax = d.avg === max; // 가장 붐빈 요일만 검게 강조, 나머지는 옅은 회색
         return (
-          <div key={d.dow} className="flex items-center gap-3">
+          <div key={d.dow} className="flex items-center gap-4">
             <span
-              className={`w-5 shrink-0 text-center text-[13px] font-black ${
-                weekend ? "text-neutral-300" : "text-neutral-500"
+              className={`w-5 shrink-0 text-center text-[13px] ${
+                isMax ? "font-black text-neutral-900" : "font-bold text-neutral-400"
               }`}
             >
               {WEEKDAY_LABEL[d.dow]}
             </span>
             <div
-              className="h-8 flex-1 overflow-hidden rounded-lg bg-neutral-100"
+              className="h-2.5 flex-1 rounded-full bg-neutral-100"
               title={`${WEEKDAY_LABEL[d.dow]}요일 · 평균 ${d.avg}명`}
             >
               <div
-                className="h-full rounded-lg"
-                style={{ width: `${Math.max(w, 3)}%`, background: isMax ? WEEKDAY_MAX : WEEKDAY_BAR }}
+                className={`h-full rounded-full ${isMax ? "bg-neutral-900" : "bg-neutral-300"}`}
+                style={{ width: `${Math.max(w, 2)}%` }}
               />
             </div>
             <span
-              className="w-11 shrink-0 text-right text-[15px] font-black tabular-nums text-neutral-900"
-              style={isMax ? { color: WEEKDAY_MAX } : undefined}
+              className={`w-11 shrink-0 text-right text-[15px] tabular-nums ${
+                isMax ? "font-black text-neutral-900" : "font-bold text-neutral-400"
+              }`}
             >
               {d.avg}
-              <span className="ml-0.5 text-[11px] font-bold text-neutral-400">명</span>
+              <span className="ml-0.5 text-[11px] font-bold text-neutral-300">명</span>
             </span>
           </div>
         );
