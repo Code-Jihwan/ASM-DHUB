@@ -30,11 +30,11 @@ export default function Login() {
   }
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#0A0A0A] p-4 font-sans sm:p-8">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-white p-4 font-sans sm:p-6">
       {/* 레이어 스택. 높이를 확정값으로 둬 모바일에서도 무너지지 않게 한다. */}
-      <div className="relative w-full max-w-5xl h-[560px] sm:h-[600px]">
+      <div className="relative h-[600px] w-full max-w-[1500px] sm:h-[700px]">
         {/* Layer 1: 뒤 (코드 스페이스) */}
-        <div className="rise-in absolute left-[7.5%] top-0 h-[380px] w-[85%] overflow-hidden rounded-t-xl border border-white/5 bg-[#11132C] p-6 shadow-xl sm:p-8">
+        <div className="rise-in absolute left-[7.5%] top-0 h-[400px] w-[85%] overflow-hidden rounded-t-xl border border-white/5 bg-[#11132C] p-6 shadow-xl sm:h-[460px] sm:p-8">
           <pre className="font-mono text-xs leading-relaxed text-[#4A5D9A] sm:text-sm">
             <span className="text-[#6D83D4]">class</span>{" "}
             <span className="text-white">DHUB_Reservation</span>:<br />
@@ -71,7 +71,7 @@ export default function Login() {
 
         {/* Layer 2: 중간 (부산센터 개발공간 사진) */}
         <div
-          className="rise-in absolute left-[4%] top-[10%] h-[400px] w-[92%] overflow-hidden rounded-t-xl border border-white/10 shadow-2xl"
+          className="rise-in absolute left-[4%] top-[9%] h-[420px] w-[92%] overflow-hidden rounded-t-xl border border-white/10 shadow-2xl sm:h-[500px]"
           style={{ animationDelay: "0.1s" }}
         >
           <Image
@@ -92,7 +92,7 @@ export default function Login() {
 
         {/* Layer 3: 앞 (로그인 / 지도 인터페이스) */}
         <div
-          className="rise-in absolute bottom-0 left-0 z-10 h-[480px] w-full overflow-hidden rounded-xl border border-[#3A45C8] bg-[#1A25A8] shadow-[0_20px_50px_rgba(0,0,0,0.5)] sm:h-[510px]"
+          className="rise-in absolute bottom-0 left-0 z-10 h-[520px] w-full overflow-hidden rounded-xl border border-[#3A45C8] bg-[#1A25A8] shadow-[0_30px_70px_-20px_rgba(26,37,168,0.55)] sm:h-[620px]"
           style={{ animationDelay: "0.2s" }}
         >
           {/* 서면 지도 SVG 배경 */}
@@ -210,11 +210,11 @@ export default function Login() {
           {/* 가운데: 로그인 인터페이스 */}
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center px-6">
             {/* 뒤 워터마크 */}
-            <div className="pointer-events-none absolute select-none text-6xl font-black leading-none tracking-tighter text-white/5 sm:text-[10rem]">
+            <div className="pointer-events-none absolute select-none text-7xl font-black leading-none tracking-tighter text-white/[0.06] sm:text-[13rem]">
               D-HUB
             </div>
 
-            <div className="relative w-full max-w-[320px] rounded-lg border border-[#3A45C8]/50 bg-[#050A24]/60 p-6 shadow-2xl backdrop-blur-md">
+            <div className="relative w-full max-w-[360px] rounded-lg border border-[#3A45C8]/50 bg-[#050A24]/60 p-6 shadow-2xl backdrop-blur-md sm:p-7">
               {/* 터미널 헤더 */}
               <div className="mb-5 border-b border-white/10 pb-4">
                 <div className="mb-3 flex items-center gap-2">
