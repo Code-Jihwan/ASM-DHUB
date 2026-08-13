@@ -29,3 +29,25 @@ html {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* 로그인 화면 레이어 진입 애니메이션(아래에서 떠오름). 가로 정렬은 left-*로 하고
+   transform은 애니메이션 전용으로 비워 둔다(Tailwind translate와 충돌 방지). */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise-in {
+  animation: rise-in 0.6s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+    opacity: 1;
+  }
+}
