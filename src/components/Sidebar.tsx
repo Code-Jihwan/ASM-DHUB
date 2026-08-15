@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, ChartPie, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
+import { BookOpen, ChartPie, Images, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import type { Banner } from "@/lib/types";
 
 type Props = {
   name: string;
@@ -26,6 +28,7 @@ function navItems(isAdmin: boolean): NavItem[] {
     items.push({ href: "/admin", label: "관리자페이지", icon: Settings });
     items.push({ href: "/stats", label: "이용 분석", icon: ChartPie });
     items.push({ href: "/announcement", label: "팝업 공지", icon: Megaphone });
+    items.push({ href: "/banner", label: "광고 배너", icon: Images });
   }
   return items;
 }
@@ -34,6 +37,56 @@ async function signOut() {
   const supabase = createClient();
   await supabase.auth.signOut();
   window.location.href = "/login";
+}
+
+/**
+ * PC 사이드바 하단 광고 배너. banner(id=1)가 active이고 이미지가 있을 때만 노출한다.
+ * 화면이 충분히 높을 때만 보여(짧은 화면에서 로그아웃이 밀리지 않게), 4:5 비율로 렌더한다.
+ * 이미지는 외부(Storage 공개 URL)라 next/image 대신 <img>를 쓴다.
+ */
+function SidebarBanner() {
+  const [banner, setBanner] = useState<Banner | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("banner")
+      .select("image_url, link_url, alt, active")
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const b = data as Banner | null;
+        if (b && b.active && b.image_url) setBanner(b);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!banner?.image_url) return null;
+
+  const img = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={banner.image_url}
+      alt={banner.alt || "광고"}
+      className="aspect-[4/5] w-full rounded-2xl border border-neutral-200 object-cover"
+    />
+  );
+
+  return (
+    <div className="mx-5 mt-3 hidden [@media(min-height:800px)]:block">
+      {banner.link_url ? (
+        <a href={banner.link_url} target="_blank" rel="noopener noreferrer" className="block">
+          {img}
+        </a>
+      ) : (
+        img
+      )}
+    </div>
+  );
 }
 
 /**
@@ -95,6 +148,8 @@ export function Sidebar({ name, isAdmin }: Props) {
           );
         })}
       </nav>
+
+      <SidebarBanner />
 
       <div className="mt-auto border-t border-neutral-100 bg-neutral-50/50 p-5">
         <p className="px-4 pb-2 text-sm font-bold text-neutral-900">{name}</p>

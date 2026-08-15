@@ -51,6 +51,14 @@ export type SeatView = Seat & {
   awaySince: Date | null;
 };
 
+/** 사이드바 광고 배너(단일 행, id=1). 관리자가 관리한다. */
+export type Banner = {
+  image_url: string | null;
+  link_url: string | null;
+  alt: string;
+  active: boolean;
+};
+
 /** 로그인 후 예약 화면에 뜨는 팝업 공지(단일 행, id=1) */
 export type Announcement = {
   id: number;
