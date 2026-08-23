@@ -102,7 +102,7 @@ export function BannerForm({ initial }: { initial: Banner }) {
       <header>
         <h1 className="flex items-center gap-2 text-[28px] font-black tracking-tighter text-neutral-900">
           <Images className="h-6 w-6 text-neutral-400" />
-          광고 배너
+          배너 공지
         </h1>
         <p className="mt-1 text-sm font-bold text-neutral-500">
           PC 사이드바 하단에 노출되는 배너입니다. 이미지 · 링크를 등록하고 표시를 켜세요.
@@ -226,7 +226,7 @@ export function BannerForm({ initial }: { initial: Banner }) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={preview}
-                  alt={alt || "광고"}
+                  alt={alt || "배너 공지"}
                   className="aspect-[4/5] w-full rounded-2xl border border-neutral-200 object-cover"
                 />
               ) : (

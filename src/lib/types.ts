@@ -51,7 +51,7 @@ export type SeatView = Seat & {
   awaySince: Date | null;
 };
 
-/** 사이드바 광고 배너(단일 행, id=1). 관리자가 관리한다. */
+/** 사이드바 배너 공지(단일 행, id=1). 관리자가 관리한다. */
 export type Banner = {
   image_url: string | null;
   link_url: string | null;
