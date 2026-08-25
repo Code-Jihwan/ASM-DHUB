@@ -163,6 +163,7 @@ html {
 .login-root .cta {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   background: #1b1c1e;
   color: #fff;
