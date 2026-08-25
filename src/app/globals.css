@@ -75,7 +75,8 @@ html {
 .login-root {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100vh; /* dvh 미지원 브라우저 폴백 */
+  height: 100dvh; /* 지원 시 실제 보이는 뷰포트 높이 → 모바일 주소창 만큼 넘쳐 스크롤나는 것 방지 */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -232,8 +233,6 @@ html {
 @media (max-width: 640px) {
   .login-root {
     background: linear-gradient(180deg, #e9eaee 0%, #eceef1 42%, #f4f5f7 100%);
-    min-height: 100vh;
-    height: 100dvh;
   }
   .login-root .top {
     padding: calc(env(safe-area-inset-top) + 18px) 20px 0;
