@@ -29,3 +29,202 @@ html {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* ── 로그인 화면 (Prismatic Hero · 디자인 핸드오프 규격) ───────────
+   핸드오프 reference/login.html의 스타일을 .login-root 아래로 스코프해 그대로 옮긴다.
+   값(색·크기·타이밍)은 hifi로 확정된 것이라 수정하지 않는다. */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes tickerLine {
+  0% {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  12% {
+    opacity: 1;
+    transform: none;
+  }
+  78% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+.login-root {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #e9eaee 0%, #eceef1 38%, #f4f5f7 100%);
+  font-family: "Pretendard", -apple-system, system-ui, sans-serif;
+}
+.login-root .ribbon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.login-root .top {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 26px 30px 0;
+}
+.login-root .ticker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(27, 28, 30, 0.34);
+}
+.login-root .ticker div {
+  animation: tickerLine 7s ease-in-out infinite;
+}
+.login-root .center {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px 6vh;
+  text-align: center;
+}
+.login-root .logo {
+  height: clamp(26px, 3.2vw, 38px);
+  width: auto;
+  margin-bottom: clamp(40px, 9vh, 96px);
+  animation: fadeIn 1s ease-out both;
+}
+.login-root h1 {
+  margin: 0;
+  font-size: clamp(44px, 7vw, 96px);
+  line-height: 1.08;
+  color: #111214;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  animation: riseIn 1.1s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+.login-root .meta {
+  margin: clamp(18px, 3vh, 30px) 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1b1c1e;
+  letter-spacing: -0.015em;
+  animation: riseIn 1s ease-out 140ms both;
+}
+.login-root .meta-sub {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(27, 28, 30, 0.62);
+  letter-spacing: -0.01em;
+  animation: riseIn 1s ease-out 200ms both;
+}
+.login-root .cta-row {
+  display: flex;
+  gap: 10px;
+  margin-top: clamp(32px, 6vh, 68px);
+  animation: riseIn 1.1s cubic-bezier(0.22, 0.8, 0.3, 1) 280ms both;
+}
+.login-root .cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1b1c1e;
+  color: #fff;
+  padding: 14px 46px;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  transition:
+    background 160ms ease-out,
+    transform 160ms ease-out;
+}
+.login-root .cta:hover:not(:disabled) {
+  background: #000;
+  transform: translateY(-1px);
+}
+.login-root .cta:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.login-root .cta:focus-visible {
+  outline: 2px solid #0066ff;
+  outline-offset: 2px;
+}
+.login-root .g-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+}
+.login-root .err {
+  margin: 14px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #e5484d;
+}
+.login-root .note {
+  margin: clamp(30px, 5.5vh, 62px) 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.75;
+  color: rgba(27, 28, 30, 0.68);
+  letter-spacing: -0.012em;
+  animation: fadeIn 1.2s ease-out 420ms both;
+}
+
+/* 모션 최소화 선호 시 진입 애니메이션을 끈다(최종 상태로 바로 보이게). */
+@media (prefers-reduced-motion: reduce) {
+  .login-root .logo,
+  .login-root h1,
+  .login-root .meta,
+  .login-root .meta-sub,
+  .login-root .cta-row,
+  .login-root .note {
+    animation: none !important;
+  }
+  .login-root .ticker div {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
