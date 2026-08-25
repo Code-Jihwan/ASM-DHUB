@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { mountRibbon } from "@/lib/prismatic-ribbon";
+import { mountRibbon as mountRibbonDesktop } from "@/lib/prismatic-ribbon";
+import { mountRibbon as mountRibbonMobile } from "@/lib/prismatic-ribbon-mobile";
 
-// 상단 우측 장식용 코드 티커(데이터 바인딩 없음, 문구 그대로).
-const TICKER = [
+// 상단 우측 장식용 코드 티커(데이터 바인딩 없음, 문구 그대로). 데스크톱 6줄 / 모바일 4줄.
+const TICKER_DESKTOP = [
   "// SEAT ALLOCATOR",
   "GET /seats?center=dhub → 48",
   "POST /reservations 08:00–20:00",
@@ -13,17 +14,39 @@ const TICKER = [
   "OFF-HOURS → OPEN SEATING",
   "// 200 OK",
 ];
+const TICKER_MOBILE = [
+  "// SEAT ALLOCATOR",
+  "GET /seats?center=dhub → 48",
+  "POST /reservations 08–20",
+  "// 200 OK",
+];
+
+const MOBILE_MQ = "(max-width: 640px)";
 
 export default function Login() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 프리즈매틱 리본 애니메이션(framework-agnostic 모듈, 그대로 재사용).
+  // 프리즈매틱 리본. 뷰포트에 맞는 변형(데스크톱/세로)을 마운트하고, 경계를 넘으면 다시 마운트한다.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    return mountRibbon(canvas, { speed: 1, glow: 1.1 });
+    const mq = window.matchMedia(MOBILE_MQ);
+    let cleanup: (() => void) | undefined;
+    const mount = () => {
+      cleanup?.();
+      cleanup = (mq.matches ? mountRibbonMobile : mountRibbonDesktop)(canvas, {
+        speed: 1,
+        glow: 1.1,
+      });
+    };
+    mount();
+    mq.addEventListener("change", mount);
+    return () => {
+      mq.removeEventListener("change", mount);
+      cleanup?.();
+    };
   }, []);
 
   async function signIn() {
@@ -46,9 +69,16 @@ export default function Login() {
       <canvas ref={canvasRef} className="ribbon" aria-hidden="true" />
 
       <div className="top">
-        <div className="ticker" aria-hidden="true">
-          {TICKER.map((line, i) => (
+        <div className="ticker ticker--desktop" aria-hidden="true">
+          {TICKER_DESKTOP.map((line, i) => (
             <div key={line} style={{ animationDelay: `${i * 0.35}s` }}>
+              {line}
+            </div>
+          ))}
+        </div>
+        <div className="ticker ticker--mobile" aria-hidden="true">
+          {TICKER_MOBILE.map((line, i) => (
+            <div key={line} style={{ animationDelay: `${i * 0.4}s` }}>
               {line}
             </div>
           ))}
@@ -97,7 +127,7 @@ export default function Login() {
 
 function GoogleGlyph() {
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="g-svg" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="#4285F4"
         d="M23 12.2c0-.8-.1-1.6-.2-2.3H12v4.4h6.1a5.3 5.3 0 0 1-2.3 3.4v2.9h3.7c2.2-2 3.5-5 3.5-8.4z"
