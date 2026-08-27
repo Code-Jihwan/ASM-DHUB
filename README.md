@@ -1,6 +1,10 @@
 # 부산센터 D-HUB 좌석 예약 (@@자리요)
 
-48석 개발공간(D-HUB)을 예약제로 운영하기 위한 웹앱. PC / 모바일 반응형.
+48석 개발공간(D-HUB)을 예약제로 운영하는 웹앱. PC / 모바일 반응형.
+좌석 예약·자리비움·연장 같은 기본 흐름부터, 관리자 운영 도구(명단·신고·공지·이용 분석)와
+예약 알림(웹 푸시)까지 갖췄다.
+
+배포: **[www.asm-dhub.fkii.space](https://www.asm-dhub.fkii.space)** (Vercel + Supabase)
 
 ## 릴리스 노트 · v1.0.0
 
@@ -10,6 +14,24 @@
 
 > 원본 HTML: [`docs/release-note.html`](docs/release-note.html) — 브라우저에서 열어 인쇄(PDF 저장)할 수 있습니다.
 
+## 주요 기능
+
+**연수생**
+
+- **좌석 예약** — "지금부터 몇 분" 방식. **30분·1시간·2시간·3시간 프리셋** + 10분 단위 조절
+- **연장 / 자리 변경 / 자리비움·복귀**
+- **좌석 반납 · 예약 취소** — 10분 넘게 쓰고 그만두면 "좌석 반납"(정상 이용), 10분 이내면 "예약 취소"
+- **웹 푸시 알림** — 자리비움 복귀 경고·연장 가능·종료 임박·자동취소. 앱을 닫아둬도 기기 알림으로 옴
+- **사용 방법** — 연수생용 가이드 페이지(`/guide`)
+- **신고** — 자리 이용 / 시설 고장 / 기타
+
+**관리자** (`profile.is_admin = true`)
+
+- **관리자 페이지**(`/admin`) — 좌석 점검 잠금, 연수생 명단, 신고 처리, 권한, 좌석 이용 이력
+- **이용 분석**(`/stats`) — 요일별 이용 인원·현재 이용 중·하루 평균, **이용 시간 TOP 5**, 시간대별 평균 점유율, 좌석별 이용률, 예약 시간 분포, 종료 유형 (전체/최근 7·30일/직접 기간)
+- **팝업 공지**(`/announcement`) — 로그인 후 예약 화면 진입 시 뜨는 공지
+- **배너 공지**(`/banner`) — PC 사이드바 하단 이미지 배너(관리자가 업로드/온·오프)
+
 ## 예약 규칙
 
 | 항목 | 값 |
@@ -18,18 +40,34 @@
 | 좌석 | 48석 · 3블록 × 2줄 × 8열 (창가 → 출입문) |
 | 예약 시작 | **지금부터** — 센터에 와서 예약하는 방식 (미래 시각 예약 없음) |
 | 예약 오픈 유예 | 07:30–08:00 사이 예약 시 시작 시각을 08:00으로 당겨 준다 |
-| 기본 예약 | 최대 3시간 |
+| 기본 예약 | 최대 3시간 (프리셋 30·60·120·180분) |
 | 연장 | 종료 1시간 전부터, 최대 3시간, **1회만** |
 | 한 예약의 최대 길이 | 6시간 (3 + 3). 이후엔 새로 예약 |
 | 시간 단위 | 10분 |
 | 동시 보유 | 1인 1건 |
 | 자리 변경 | 이용 시간은 그대로 두고 **자리만 이동** |
-| 재예약 쿨다운 | **같은 자리는 종료·취소 후 20분간 재예약 불가** (10분 이내 취소는 예외). 다른 자리는 즉시 |
-| 자리비움 | 20분 안에 복귀하지 않으면 예약 자동 취소 (이후 그 자리 20분 쿨다운) |
+| 자리비움 | 20분 안에 복귀하지 않으면 예약 자동 취소. **예약당 최대 2회**까지 |
+| 재예약 쿨다운 | **같은 자리는 종료·반납·자동취소 후 20분간 재예약 불가** (10분 이내 취소는 예외). 다른 자리는 즉시 |
 
 규칙은 **전부 DB에 있다.** 앱 코드는 화면을 그릴 뿐이고, 최종 판정은 PostgreSQL이 한다.
 `src/lib/policy.ts`의 상수는 화면 표시용 사본이므로, 값을 바꾸면 `supabase/migrations/`의
-`policy` 스키마(0001, 0006, 0011, 0014, 0015 …)도 함께 바꿔야 한다.
+`policy` 스키마(0001, 0006, 0011, 0012, 0014, 0015, 0021, 0022, 0025 …)도 함께 바꿔야 한다.
+
+## 알림 (웹 푸시)
+
+앱을 닫아둬도 **기기 OS 알림**으로 도착한다. PC에서 허용하면 PC로, 폰에서 허용하면 폰으로 온다.
+
+| 알림 | 트리거 |
+| --- | --- |
+| 자리비움 복귀 경고 | 자리비움 **15분** 경과 (자동취소 5분 전) |
+| 연장 가능 | 예약 **종료 1시간 전** (연장 창 열림, 미연장) |
+| 종료 임박 | 예약 **종료 10분 전** |
+| 자동취소됨 | 자리비움 20분 초과로 취소된 순간 |
+
+- 각 이벤트는 `notif_log`로 **1회만** 발송(중복 방지). 만료된 구독은 발송 시 자동 정리한다.
+- 매분 **pg_cron → `/api/push/run`**(시크릿 헤더로 보호)이 발송 대상을 계산(`claim_due_push_events()`)해 보낸다.
+- 화면엔 알림 목록/메뉴가 없다 — 기기 알림만. 권한은 첫 접속 시 브라우저 팝업으로 자동 요청(별도 버튼 없음).
+- **아이폰**은 사파리 일반 탭에서 불가 — "홈 화면에 추가"(PWA 설치, iOS 16.4+) 후에만 받는다(앱이 자동 안내).
 
 ## 가입 · 접근 제어
 
@@ -41,62 +79,97 @@
 | 사무국 예외 | 팀명을 **`사무국`**으로 입력하면 명단 없이 가입 (관리자 권한은 자동 부여 안 함) |
 | 접속 제한 | `CENTER_IPS`가 설정되면 **센터 와이파이(공인 IP)에서만 예약 가능**. 외부 접속 시 버튼 차단 (서버에서도 강제) |
 
-## 관리자 페이지
-
-`profile.is_admin = true`인 사용자만 접근한다.
-
-- **좌석 점검 잠금** — 특정 좌석을 예약 불가(`seat.active=false`)로 전환/해제. 잠글 때 진행 중·예정 예약은 함께 취소
-- **연수생 명단 관리** — 추가·삭제·검색, 가입 현황(가입 계정 이메일), 계정 연결 해제
-- **신고 처리** — 유형(자리 이용/시설 고장/기타) 필터, 처리 전/완료 전환
-- **사용자 권한** — 관리자 지정/해제
-- **좌석 이용 이력** — 좌석별 예약 기록 조회
-
 ## 기술 스택
 
 - Next.js 16 (App Router) / React 19 / TypeScript
 - Tailwind CSS v4
-- Supabase (PostgreSQL + Auth + Realtime)
+- Supabase (PostgreSQL + Auth + Realtime + Storage + pg_cron)
+- 웹 푸시: Service Worker(`public/sw.js`) + [`web-push`](https://www.npmjs.com/package/web-push) (VAPID)
 
 ## 설정
 
 ### 1. Supabase 프로젝트
 
 1. [supabase.com](https://supabase.com)에서 프로젝트 생성 (region은 `Northeast Asia (Seoul)` 권장)
-2. SQL Editor에서 `supabase/migrations/`의 파일을 **번호 순서대로**(0001 → 0020) 붙여넣고 실행
-3. **연수생 명단 적재** — `supabase/dev/roster_seed.sql`(예시)처럼 `roster(team, name)`에 명단을 넣는다.
+2. SQL Editor에서 `supabase/migrations/`의 파일을 **번호 순서대로**(0001 → 0033) 붙여넣고 실행
+3. **연수생 명단 적재** — `roster(team, name)`에 명단을 넣는다(예: `supabase/dev/roster_seed.sql`).
    명단이 비어 있으면 신규 가입이 전부 막히므로 마이그레이션 직후 바로 넣는다.
-4. Settings > API에서 값을 복사해 `.env.local` 작성
+4. Settings > API에서 값을 복사해 `.env.local` 작성 (아래)
 
-```
+### 2. 환경 변수 (`.env.local` / 배포 시 Vercel)
+
+```bash
+# 필수
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
-# 센터 와이파이 제한을 켤 때만. 센터 공인 IP를 콤마로 구분. 비우면 제한 꺼짐.
+
+# 센터 와이파이 제한을 켤 때만 (센터 공인 IP를 콤마로 구분, 비우면 제한 꺼짐)
 CENTER_IPS=115.22.60.18
+
+# 웹 푸시 알림을 켤 때만 (아래 3번 참고)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=B...      # 공개키(브라우저 노출 OK)
+VAPID_PRIVATE_KEY=...                  # 서버 전용
+VAPID_SUBJECT=mailto:you@example.com   # 푸시 제공자에 밝히는 운영자 연락처
+PUSH_RUN_SECRET=...                    # /api/push/run 보호용 랜덤 시크릿
+SUPABASE_SERVICE_ROLE_KEY=...          # 서버 전용(발송 라우트에서만). 절대 NEXT_PUBLIC 금지
 ```
 
-`service_role`(secret) 키는 넣지 않는다. 브라우저로 새어나가면 RLS가 통째로 무력화된다.
-`CENTER_IPS`는 서버 전용(비공개)이며, 배포 환경(Vercel)에서는 환경 변수로 넣고 **저장 후 재배포**해야 반영된다.
+- `SUPABASE_SERVICE_ROLE_KEY`는 **서버 라우트(`/api/push/run`)에서만** 쓰며 RLS를 우회한다.
+  브라우저로 새어나가면 RLS가 통째로 무력화되니 **절대 `NEXT_PUBLIC_`을 붙이거나 클라이언트로 내보내지 않는다.**
+- `CENTER_IPS`·`VAPID_PRIVATE_KEY`·`PUSH_RUN_SECRET`도 서버 전용(비공개). 배포(Vercel)에선
+  환경 변수로 넣고 **저장 후 재배포**해야 반영된다. `NEXT_PUBLIC_*` 값은 빌드 시점에 심어지므로 특히 재배포 필수.
 
-### 2. 로그인 방식
+### 3. 로그인 방식
 
 Google OAuth (`signInWithOAuth`)를 쓴다. Supabase 대시보드에서:
 
 - Authentication > Providers에서 **Google** 활성화 + OAuth 클라이언트 등록
 - Authentication > URL Configuration의 Redirect URLs에 배포 도메인과 `http://localhost:3000/**` 추가
 
-### 3. 자리비움 자동 취소 (선택, 운영 권장)
+### 4. 자리비움 자동 취소 (선택, 운영 권장)
 
 앱이 열려 있으면 클라이언트가 자리비움 20분 초과 예약을 스스로 취소한다. 앱을 닫아버린
 경우까지 확실히 처리하려면 서버에서 주기적으로 쓸어야 한다.
 
 - Database > Extensions에서 `pg_cron` 활성화
-- `supabase/migrations/0012_away_autocancel.sql` 실행 후, SQL Editor에서:
+- `0012_away_autocancel.sql` 실행 후, SQL Editor에서:
 
 ```sql
 select cron.schedule('cancel-stale-away', '* * * * *', $$ select cancel_stale_away() $$);
 ```
 
-### 4. 실행
+### 5. 웹 푸시 알림 (선택)
+
+1. VAPID 키 생성 → 위 환경 변수에 넣는다.
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. `0033_web_push.sql` 실행 (구독 테이블 + 발송 판정 함수).
+3. Extensions에서 `pg_cron`·`pg_net` 활성화 후, 매분 발송 트리거 등록:
+   ```sql
+   create extension if not exists pg_net;
+   select cron.schedule('push-run', '* * * * *', $$
+     select net.http_post(
+       url := 'https://<배포도메인>/api/push/run',
+       headers := jsonb_build_object(
+         'content-type','application/json',
+         'x-cron-secret','<PUSH_RUN_SECRET 값>'
+       ),
+       body := '{}'::jsonb
+     );
+   $$);
+   ```
+4. 확인: 시크릿 헤더를 넣어 `POST /api/push/run` → `{"events":N,"sent":M}`면 정상.
+
+### 6. 팝업 공지 · 배너 공지
+
+- **팝업 공지** — `0024_announcement.sql` 실행 후 `/announcement`에서 작성·표시.
+- **배너 공지** — `0032_sidebar_banner.sql`이 `banners` 스토리지 버킷 + `banner` 테이블을 만든다.
+  실행 후 `/banner`에서 이미지 업로드로 운영(4:5, ~400×500px 권장).
+
+둘 다 별도 환경 변수 없이 마이그레이션 + 관리자 화면만으로 동작한다.
+
+### 7. 실행
 
 ```bash
 npm install
@@ -120,9 +193,16 @@ exclude using gist (seat_id with =, period with &&) where (status = 'active')
 
 ### "지금부터 몇 분" 모델
 
-예약은 절대 시각을 고르지 않는다. 시작은 늘 현재 분(초 버림)이고, 이용 시간을 10분 단위로
-고른다(`src/components/ReservationPanel.tsx`). 예약이 자정을 넘을 수 없고, 종료 시각이
+예약은 절대 시각을 고르지 않는다. 시작은 늘 현재 분(초 버림)이고, 이용 시간을 프리셋(30·60·120·180분)
+또는 10분 단위로 고른다(`src/components/ReservationPanel.tsx`). 예약이 자정을 넘을 수 없고, 종료 시각이
 운영 마감(20:00)에 가까우면 선택할 수 있는 이용 시간이 자연히 줄어든다.
+
+### 알림은 서버가 판정한다
+
+시간 기반 알림(“15분 지남”, “종료 10분 전”)은 클라이언트 타이머로는 앱을 닫으면 못 보낸다.
+그래서 `claim_due_push_events()`(SQL)가 매분 예약을 훑어 발송 대상을 계산하고 `notif_log`에
+원자적으로 "집어들며"(중복 방지), 서버 라우트가 그 결과만 실제 푸시로 보낸다. 판정 로직은 SQL에
+있어 로컬 Postgres로 검증할 수 있다.
 
 ### 개발용 24시간 모드
 
@@ -142,4 +222,5 @@ exclude using gist (seat_id with =, period with &&) where (status = 'active')
   자리비움을 켜지 않은 채 안 오는 경우는 신고로 처리한다.
 - **명단 도용** — 이름·팀을 정직하게 입력한다는 전제. 완전 중복(같은 명단 재사용)은 막히지만,
   미가입자의 이름·팀을 알고 선점하는 것까지는 막지 않는다.
-- **알림** — 자리비움 임박·자동 취소 등을 푸시/메일로 알리는 기능은 아직 없다.
+- **알림 옵트인** — 웹 푸시는 기기마다 "허용"을 한 번 눌러야 하고, 아이폰은 홈 화면 추가가 필요하다.
+  거부/미설치한 사용자에게는 알림이 가지 않는다(브라우저 정책상 우회 불가).
