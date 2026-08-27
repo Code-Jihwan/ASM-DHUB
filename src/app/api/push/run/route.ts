@@ -32,11 +32,7 @@ export async function POST(req: Request) {
     if (!serviceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
     if (!vapidPublic) missing.push("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
     if (!vapidPrivate) missing.push("VAPID_PRIVATE_KEY");
-    // 진단(임시): 런타임에 실제로 들어온 관련 env '이름'만 나열(값 아님). 오타/빈값 구분용.
-    const present = Object.keys(process.env)
-      .filter((k) => /SUPABASE|SERVICE|VAPID|PUSH/i.test(k))
-      .sort();
-    return NextResponse.json({ error: "missing env", missing, present }, { status: 500 });
+    return NextResponse.json({ error: "missing env", missing }, { status: 500 });
   }
 
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
