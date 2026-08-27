@@ -1,5 +1,7 @@
 import {
   ArrowRightLeft,
+  Bell,
+  CircleX,
   Clock,
   Coffee,
   Hand,
@@ -255,6 +257,35 @@ export function GuidePage() {
           <b className="font-bold text-neutral-800">자리비움은 20분까지</b> — 비운 뒤 20분 안에
           복귀하지 않으면 예약이 자동으로 취소돼요. 그리고 그 자리는 이후 20분간 다시 예약할 수 없어요
           (다른 자리는 바로 가능).
+        </p>
+      </section>
+
+      {/* 알림 */}
+      <section className={CARD}>
+        <h2 className={H2}>알림 받기</h2>
+        <p className="mb-4 text-[12px] font-medium text-neutral-500">
+          예약의 중요한 순간에 기기로 알림을 보내드려요. 자리를 놓치지 않게요.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Feature icon={Coffee} title="자리비움 복귀 알림" tone="amber">
+            자리 비운 지 15분이 지나면 “5분 안에 복귀하세요” 하고 알려드려요.
+          </Feature>
+          <Feature icon={Clock} title="연장 가능 알림" tone="sky">
+            종료 1시간 전, 연장할 수 있게 되면 알려드려요.
+          </Feature>
+          <Feature icon={Timer} title="종료 임박 알림" tone="amber">
+            종료 10분 전, 연장하거나 반납하라고 알려드려요.
+          </Feature>
+          <Feature icon={CircleX} title="자동취소 알림">
+            자리비움 시간을 넘겨 예약이 취소되면 알려드려요.
+          </Feature>
+        </div>
+        <p className={`${NOTE} mt-4`}>
+          <Bell className="mr-1.5 inline h-4 w-4 -translate-y-0.5 text-neutral-400" />
+          <b className="font-bold text-neutral-800">알림 켜기</b> — 처음 접속할 때 뜨는 “알림 허용”을
+          한 번 누르면 끝이에요. 앱을 닫아둬도 알림이 옵니다.{" "}
+          <b className="font-bold text-neutral-800">아이폰</b>은 공유 → “홈 화면에 추가” 후 그
+          아이콘으로 열어야 알림을 받을 수 있어요.
         </p>
       </section>
 
