@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /api/push/* 는 크론(세션 없음)이 호출한다. 자체 시크릿 헤더로 보호하므로 세션 인증에서 뺀다.
+const PUBLIC_PATHS = ["/login", "/auth", "/api/push"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -1,4 +1,5 @@
 import { MobileHeader, MobileTabBar, Sidebar } from "./Sidebar";
+import { PushAutoEnable } from "./PushAutoEnable";
 
 type Props = {
   name: string;
@@ -45,6 +46,9 @@ export function AppShell({ name, isAdmin, variant = "fill", children }: Props) {
 
         <MobileTabBar isAdmin={isAdmin} />
       </div>
+
+      {/* 웹 푸시 자동 등록(버튼 없음) + 아이폰 안내 */}
+      <PushAutoEnable />
     </div>
   );
 }
