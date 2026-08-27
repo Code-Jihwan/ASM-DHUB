@@ -25,13 +25,13 @@ export async function POST(req: Request) {
   const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
   const vapidSubject = process.env.VAPID_SUBJECT || "mailto:swmaestro.busan@gmail.com";
-  const missing: string[] = [];
-  if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  if (!serviceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-  if (!vapidPublic) missing.push("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
-  if (!vapidPrivate) missing.push("VAPID_PRIVATE_KEY");
-  if (missing.length > 0) {
+  if (!url || !serviceKey || !vapidPublic || !vapidPrivate) {
     // 값이 아니라 '어떤 키가 비었는지' 이름만 알려 준다(디버그용, 안전).
+    const missing: string[] = [];
+    if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+    if (!serviceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+    if (!vapidPublic) missing.push("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+    if (!vapidPrivate) missing.push("VAPID_PRIVATE_KEY");
     return NextResponse.json({ error: "missing env", missing }, { status: 500 });
   }
 
