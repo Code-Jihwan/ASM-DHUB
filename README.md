@@ -91,7 +91,7 @@
 ### 1. Supabase 프로젝트
 
 1. [supabase.com](https://supabase.com)에서 프로젝트 생성 (region은 `Northeast Asia (Seoul)` 권장)
-2. SQL Editor에서 `supabase/migrations/`의 파일을 **번호 순서대로**(0001 → 0033) 붙여넣고 실행
+2. SQL Editor에서 `supabase/migrations/`의 파일을 **번호 순서대로**(0001 → 0034) 붙여넣고 실행
 3. **연수생 명단 적재** — `roster(team, name)`에 명단을 넣는다(예: `supabase/dev/roster_seed.sql`).
    명단이 비어 있으면 신규 가입이 전부 막히므로 마이그레이션 직후 바로 넣는다.
 4. Settings > API에서 값을 복사해 `.env.local` 작성 (아래)
