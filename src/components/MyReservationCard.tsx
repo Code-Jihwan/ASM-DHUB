@@ -11,6 +11,7 @@ import {
   fmtDate,
   fmtMinutes,
   fmtTime,
+  floorMinute,
   inExtendWindow,
   isSeatReturn,
   parseRange,
@@ -58,6 +59,12 @@ export function MyReservationCard({
   const canExtend = !reservation.extended && inExtendWindow(end, now);
   const opensAt = addHours(end, -POLICY.extendWindowHours);
   const minsLeft = Math.max(0, Math.round((end.getTime() - now.getTime()) / 60000));
+
+  // 자리 변경 가능 여부. DB는 이동 시 시작을 10분 격자에 맞추므로, 정렬 가능한 남은 시간이
+  // 10분 미만이면 이동을 막는다(0034). 그 조건과 똑같이 계산해 버튼을 미리 숨긴다.
+  //   earliest = max(시작, 현재 분) → (종료 - earliest)가 10분 미만이면 불가.
+  const moveEarliest = start > floorMinute(now) ? start : floorMinute(now);
+  const canMove = Math.floor((end.getTime() - moveEarliest.getTime()) / 60000) >= POLICY.slotMinutes;
 
   const awaySince = reservation.away_since ? new Date(reservation.away_since) : null;
   const away = awaySince ? awayMinutes(awaySince, now) : null;
@@ -211,19 +218,21 @@ export function MyReservationCard({
                 : "복귀했어요"}
             </button>
           )}
-          <button type="button" onClick={onChange} disabled={busy} className={ACTION}>
-            <Pencil className="h-4 w-4" />
-            자리 변경
-          </button>
+          {canMove && (
+            <button type="button" onClick={onChange} disabled={busy} className={ACTION}>
+              <Pencil className="h-4 w-4" />
+              자리 변경
+            </button>
+          )}
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className={
+            className={`${ACTION} ${canMove ? "" : "col-span-2"} ${
               isReturn
-                ? `${ACTION} hover:border-emerald-500 hover:text-emerald-700`
-                : `${ACTION} hover:border-red-500 hover:text-red-600`
-            }
+                ? "hover:border-emerald-500 hover:text-emerald-700"
+                : "hover:border-red-500 hover:text-red-600"
+            }`}
           >
             {isReturn ? <CircleCheck className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
             {isReturn ? "좌석 반납" : "예약 취소"}
