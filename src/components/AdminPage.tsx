@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
-import { fmtDate, fmtTime, isSeatReturn, parseRange } from "@/lib/policy";
+import { fmtDate, fmtMinutes, fmtTime, isSeatReturn, parseRange } from "@/lib/policy";
 import type { Occupancy, Seat, SeatHistoryRow, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
 
@@ -18,6 +18,7 @@ type AdminUser = {
   is_admin: boolean;
   email: string;
   created_at: string;
+  minutes?: number; // 누적 개발공간 이용 시간(분). 마이그레이션 0035 이후 채워진다.
 };
 
 type Report = {
@@ -38,6 +39,7 @@ type RosterRow = {
   claimed: boolean;
   claimed_email: string | null;
   claimed_at: string | null;
+  minutes?: number; // 가입한 계정의 누적 이용 시간(분). 미가입/미적용이면 없거나 0.
 };
 
 const REPORT_KIND = {
@@ -849,6 +851,12 @@ export function AdminPage({ seats, userId }: Props) {
                       <p className="truncate text-[12px] font-bold text-neutral-400">
                         {u.team} · {u.email}
                       </p>
+                      {typeof u.minutes === "number" && (
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-neutral-500">
+                          <Clock className="h-3 w-3 shrink-0 text-neutral-400" />
+                          누적 이용 {fmtMinutes(u.minutes)}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -979,6 +987,12 @@ export function AdminPage({ seats, userId }: Props) {
                   {r.claimed_email && (
                     <p className="mt-0.5 truncate text-[11px] font-bold text-neutral-400">
                       {r.claimed_email}
+                    </p>
+                  )}
+                  {r.claimed && typeof r.minutes === "number" && (
+                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-neutral-500">
+                      <Clock className="h-3 w-3 shrink-0 text-neutral-400" />
+                      누적 이용 {fmtMinutes(r.minutes)}
                     </p>
                   )}
                 </div>
