@@ -315,33 +315,37 @@ export function AdminPage({ seats, userId }: Props) {
     setReloadKey((k) => k + 1);
   }
 
-  // 연수생 명단을 CSV로 내려받는다(엑셀에서 바로 열림). UTF-8 BOM으로 한글 깨짐 방지.
-  function downloadRosterCsv() {
+  // 연수생 명단을 엑셀(.xlsx)로 내려받는다. 무거운 라이브러리라 버튼을 누를 때만 동적 로드한다.
+  async function downloadRoster() {
     const list = roster ?? [];
     if (list.length === 0) return;
-    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const headers = ["이름", "팀이름", "구글계정", "가입여부", "누적 이용 시간"];
-    const lines = list.map((r) =>
-      [
-        r.name,
-        r.team,
-        r.claimed ? (r.claimed_email ?? "") : "",
-        r.claimed ? "가입" : "미가입",
+    const XLSX = await import("xlsx");
+    const header = ["이름", "팀이름", "구글계정", "가입여부", "누적 이용 시간"];
+    const rows = list.map((r) => ({
+      이름: r.name,
+      팀이름: r.team,
+      구글계정: r.claimed ? (r.claimed_email ?? "") : "",
+      가입여부: r.claimed ? "가입" : "미가입",
+      "누적 이용 시간":
         r.claimed && typeof r.minutes === "number" ? fmtMinutes(r.minutes) : "",
-      ]
-        .map((c) => esc(String(c)))
-        .join(","),
-    );
-    const BOM = String.fromCharCode(0xfeff); // 엑셀이 UTF-8로 인식하도록
-    const csv = BOM + [headers.map(esc).join(","), ...lines].join("\r\n");
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows, { header });
+    ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 26 }, { wch: 10 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "연수생 명단");
+    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
     const now = new Date();
     const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
       now.getDate(),
     ).padStart(2, "0")}`;
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const url = URL.createObjectURL(
+      new Blob([buf], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+    );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `연수생_명단_${stamp}.csv`;
+    a.download = `연수생_명단_${stamp}.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -942,13 +946,13 @@ export function AdminPage({ seats, userId }: Props) {
           </h2>
           <button
             type="button"
-            onClick={downloadRosterCsv}
+            onClick={downloadRoster}
             disabled={!roster || roster.length === 0}
-            title="이름 · 팀 · 구글계정 · 가입여부 · 누적 이용 시간을 엑셀(CSV)로 내려받습니다"
+            title="이름 · 팀 · 구글계정 · 가입여부 · 누적 이용 시간을 엑셀 파일(.xlsx)로 내려받습니다"
             className="flex shrink-0 items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-600 transition-all hover:border-neutral-900 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" />
-            엑셀 다운로드
+            명단 다운로드
           </button>
         </div>
         <p className="mb-4 text-[13px] font-medium text-neutral-500">
