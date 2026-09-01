@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, Lock, LockOpen, Plus, Search, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { humanizeDbError } from "@/lib/errors";
 import { useNow } from "@/lib/useNow";
@@ -313,6 +313,39 @@ export function AdminPage({ seats, userId }: Props) {
     }
     setNotice(`잠금을 해제했습니다: ${r.team} · ${r.name}`);
     setReloadKey((k) => k + 1);
+  }
+
+  // 연수생 명단을 CSV로 내려받는다(엑셀에서 바로 열림). UTF-8 BOM으로 한글 깨짐 방지.
+  function downloadRosterCsv() {
+    const list = roster ?? [];
+    if (list.length === 0) return;
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const headers = ["이름", "팀이름", "구글계정", "가입여부", "누적 이용 시간"];
+    const lines = list.map((r) =>
+      [
+        r.name,
+        r.team,
+        r.claimed ? (r.claimed_email ?? "") : "",
+        r.claimed ? "가입" : "미가입",
+        r.claimed && typeof r.minutes === "number" ? fmtMinutes(r.minutes) : "",
+      ]
+        .map((c) => esc(String(c)))
+        .join(","),
+    );
+    const BOM = String.fromCharCode(0xfeff); // 엑셀이 UTF-8로 인식하도록
+    const csv = BOM + [headers.map(esc).join(","), ...lines].join("\r\n");
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
+      now.getDate(),
+    ).padStart(2, "0")}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `연수생_명단_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async function toggleAdmin(u: AdminUser) {
@@ -900,12 +933,24 @@ export function AdminPage({ seats, userId }: Props) {
       </section>
 
       <section className={CARD}>
-        <h2 className="mb-1 flex items-center gap-2 text-lg font-black tracking-tight text-neutral-900">
-          연수생 명단
-          <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-bold text-neutral-600 tabular-nums">
-            {roster === null ? "—" : `${roster.length}명`}
-          </span>
-        </h2>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-neutral-900">
+            연수생 명단
+            <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-bold text-neutral-600 tabular-nums">
+              {roster === null ? "—" : `${roster.length}명`}
+            </span>
+          </h2>
+          <button
+            type="button"
+            onClick={downloadRosterCsv}
+            disabled={!roster || roster.length === 0}
+            title="이름 · 팀 · 구글계정 · 가입여부 · 누적 이용 시간을 엑셀(CSV)로 내려받습니다"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-600 transition-all hover:border-neutral-900 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Download className="h-3.5 w-3.5" />
+            엑셀 다운로드
+          </button>
+        </div>
         <p className="mb-4 text-[13px] font-medium text-neutral-500">
           명단에 있는 사람만 가입할 수 있습니다. 한 명단은 한 계정에만 연결됩니다.
           {roster !== null && (
