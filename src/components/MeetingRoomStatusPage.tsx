@@ -282,8 +282,11 @@ export function MeetingRoomStatusPage() {
               }}
             >
               <div style={{ gridArea: "1 / 1 / 3 / 2", display: "flex", flexDirection: "column", gap: 5 }}>
+                {/* 배치도 A열은 도면대로 위→아래 A4·A3·A2·A1 (A1이 맨 아래). 리스트는 오름차순 그대로. */}
                 {rooms
                   .filter((r) => r.row === "col")
+                  .slice()
+                  .reverse()
                   .map((r) => (
                     <MapTile
                       key={r.id}
