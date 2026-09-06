@@ -7,6 +7,7 @@ import {
   ACCENT,
   DE,
   DS,
+  KNOWN_ROOMS,
   SPAN,
   STEP,
   dur,
@@ -125,12 +126,22 @@ export function MeetingRoomStatusPage() {
   const isPast = (b: Booking) => isToday && clock >= b.end;
   const inUseRoom = (roomId: string) => bookingsOf(roomId).some(isLive);
 
-  const firstWithBooking = data.rooms.find((r) => data.bookings.some((b) => b.roomId === r.id))?.id;
+  // 방 목록·순서는 저장된 스냅샷이 아니라 코드(KNOWN_ROOMS)를 기준으로 렌더 시점에 만든다.
+  // 그래야 순서/정원 변경이 재업로드 없이 바로 반영된다. 스냅샷에만 있는 방은 뒤에 덧붙인다.
+  const extraIds = [...new Set(data.bookings.map((b) => b.roomId))].filter(
+    (id) => !KNOWN_ROOMS.some((r) => r.id === id),
+  );
+  const rooms: RoomDef[] = [
+    ...KNOWN_ROOMS,
+    ...extraIds.map((id) => ({ id, space: "", meta: "", row: "extra" as const })),
+  ];
+
+  const firstWithBooking = rooms.find((r) => data.bookings.some((b) => b.roomId === r.id))?.id;
   const selEff =
-    selId && data.rooms.some((r) => r.id === selId)
+    selId && rooms.some((r) => r.id === selId)
       ? selId
-      : (firstWithBooking ?? data.rooms[0]?.id ?? "");
-  const sel = data.rooms.find((r) => r.id === selEff) ?? data.rooms[0];
+      : (firstWithBooking ?? rooms[0]?.id ?? "");
+  const sel = rooms.find((r) => r.id === selEff) ?? rooms[0];
   const selBookings = bookingsOf(sel.id);
   const totalConfirmed = data.bookings.length;
 
@@ -180,7 +191,7 @@ export function MeetingRoomStatusPage() {
   );
 
   const freeCount = isToday
-    ? `${data.rooms.filter((r) => !inUseRoom(r.id)).length}개 이용 가능`
+    ? `${rooms.filter((r) => !inUseRoom(r.id)).length}개 이용 가능`
     : `예약 ${totalConfirmed}건`;
   const freeCountColor = isToday ? "#00A939" : "#6B6E76";
 
@@ -271,7 +282,7 @@ export function MeetingRoomStatusPage() {
               }}
             >
               <div style={{ gridArea: "1 / 1 / 3 / 2", display: "flex", flexDirection: "column", gap: 5 }}>
-                {data.rooms
+                {rooms
                   .filter((r) => r.row === "col")
                   .map((r) => (
                     <MapTile
@@ -294,7 +305,7 @@ export function MeetingRoomStatusPage() {
                   gap: 5,
                 }}
               >
-                {data.rooms
+                {rooms
                   .filter((r) => r.row === "top")
                   .map((r) => (
                     <MapTile
@@ -356,7 +367,7 @@ export function MeetingRoomStatusPage() {
 
           {/* 회의실 리스트 */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-            {data.rooms.map((r) => {
+            {rooms.map((r) => {
               const on = r.id === sel.id;
               const rb = bookingsOf(r.id);
               const inUse = inUseRoom(r.id);
