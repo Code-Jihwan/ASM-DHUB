@@ -6,13 +6,14 @@
 
 배포: **[www.asm-dhub.fkii.space](https://www.asm-dhub.fkii.space)** (Vercel + Supabase)
 
-## 릴리스 노트 · v1.0.0
+## 릴리스 노트 · v1.1.0
 
 <p align="center">
-  <img src="docs/release-note-v1.0.0.png" alt="@@자리요 v1.0.0 릴리스 노트" width="760">
+  <img src="docs/release-note-v1.1.0.png" alt="@@자리요 v1.1.0 릴리스 노트" width="760">
 </p>
 
-> 원본 HTML: [`docs/release-note.html`](docs/release-note.html) — 브라우저에서 열어 인쇄(PDF 저장)할 수 있습니다.
+> 원본 HTML: [`docs/release-note-v1.1.0.html`](docs/release-note-v1.1.0.html) — 브라우저에서 열어 인쇄(PDF 저장)할 수 있습니다.
+> 이전 버전: [v1.0.0](docs/release-note.html)
 
 ## 주요 기능
 
