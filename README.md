@@ -13,6 +13,7 @@
 </p>
 
 > 원본 HTML: [`docs/release-note-v1.1.0.html`](docs/release-note-v1.1.0.html) — 브라우저에서 열어 인쇄(PDF 저장)할 수 있습니다.
+> 이전 버전: [v1.0.0](docs/release-note-v1.0.0.html)
 
 ## 주요 기능
 
