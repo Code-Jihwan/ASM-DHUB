@@ -212,8 +212,11 @@ export function MeetingRoomStatusPage() {
       ? hm(selBookings[0].start)
       : "-";
 
-  const hours: number[] = [];
-  for (let h = DS; h <= DE; h += STEP) hours.push(h);
+  // 우측 상세는 칸이 넓으니 눈금 라벨은 매시간(09~24), 격자선만 STEP(3시간) 간격으로.
+  const axisLabels: number[] = [];
+  for (let h = DS; h <= DE; h += 1) axisLabels.push(h);
+  const gridLines: number[] = [];
+  for (let h = DS; h <= DE; h += STEP) gridLines.push(h);
   const axisMid = Math.round((DS + DE) / 2);
 
   return (
@@ -534,7 +537,7 @@ export function MeetingRoomStatusPage() {
 
             <div style={{ position: "relative", paddingTop: 22 }}>
               <div style={{ position: "relative", height: 16 }}>
-                {hours.map((h) => (
+                {axisLabels.map((h) => (
                   <div
                     key={h}
                     style={{
@@ -579,7 +582,7 @@ export function MeetingRoomStatusPage() {
                   overflow: "hidden",
                 }}
               >
-                {hours.map((h) => (
+                {gridLines.map((h) => (
                   <div
                     key={h}
                     style={{

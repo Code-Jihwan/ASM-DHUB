@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, CalendarClock, ChartPie, Images, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
+import { BookOpen, CalendarClock, ChartPie, LogOut, Map, Megaphone, Settings, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Banner } from "@/lib/types";
@@ -31,8 +31,7 @@ function navItems(isAdmin: boolean): NavItem[] {
   if (isAdmin) {
     items.push({ href: "/admin", label: "관리자페이지", icon: Settings });
     items.push({ href: "/stats", label: "이용 분석", icon: ChartPie });
-    items.push({ href: "/announcement", label: "팝업 공지", icon: Megaphone });
-    items.push({ href: "/banner", label: "배너 공지", icon: Images });
+    items.push({ href: "/announcement", label: "팝업/배너 공지", icon: Megaphone });
   }
   return items;
 }

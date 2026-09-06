@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/AppShell";
 import { AnnouncementForm } from "@/components/AnnouncementForm";
-import type { Announcement } from "@/lib/types";
+import { BannerForm } from "@/components/BannerForm";
+import type { Announcement, Banner } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/** 팝업/배너 공지(통합). 위: 팝업 공지, 아래: 배너 공지. 둘 다 관리자만. */
 export default async function AnnouncementAdmin() {
   const supabase = await createClient();
 
@@ -28,13 +30,23 @@ export default async function AnnouncementAdmin() {
     .select("id, title, body, active, updated_at")
     .eq("id", 1)
     .maybeSingle();
-
-  const initial: Announcement =
+  const annInitial: Announcement =
     (ann as Announcement) ?? { id: 1, title: "", body: "", active: false, updated_at: "" };
+
+  const { data: b } = await supabase
+    .from("banner")
+    .select("image_url, link_url, alt, active")
+    .eq("id", 1)
+    .maybeSingle();
+  const bannerInitial: Banner =
+    (b as Banner) ?? { image_url: null, link_url: null, alt: "", active: false };
 
   return (
     <AppShell name={profile.name as string} isAdmin variant="scroll">
-      <AnnouncementForm initial={initial} />
+      <div className="flex flex-col gap-10">
+        <AnnouncementForm initial={annInitial} />
+        <BannerForm initial={bannerInitial} />
+      </div>
     </AppShell>
   );
 }

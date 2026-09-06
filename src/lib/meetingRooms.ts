@@ -32,15 +32,15 @@ export type ParseResult = {
   multiDate: boolean;
 };
 
-// 18F 회의실(고정). 리스트/배치도 순서 = 이 순서.
+// 18F 회의실(고정). 리스트/배치도 순서 = 이 순서. M1~M3, A1~A4 오름차순으로 맞춘다.
 export const KNOWN_ROOMS: RoomDef[] = [
   { id: "M1", space: "SPACE M", meta: "6인실", row: "top" },
   { id: "M2", space: "SPACE M", meta: "6인실", row: "top" },
   { id: "M3", space: "SPACE M", meta: "6인실", row: "top" },
-  { id: "A4", space: "SPACE A", meta: "4인실", row: "col" },
-  { id: "A3", space: "SPACE A", meta: "4인실", row: "col" },
-  { id: "A2", space: "SPACE A", meta: "4인실", row: "col" },
   { id: "A1", space: "SPACE A", meta: "4인실", row: "col" },
+  { id: "A2", space: "SPACE A", meta: "4인실", row: "col" },
+  { id: "A3", space: "SPACE A", meta: "4인실", row: "col" },
+  { id: "A4", space: "SPACE A", meta: "4인실", row: "col" },
 ];
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
