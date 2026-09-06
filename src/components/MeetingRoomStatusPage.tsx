@@ -1,213 +1,60 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { CalendarClock, Upload } from "lucide-react";
+import {
+  ACCENT,
+  DE,
+  DS,
+  loadMeetingRooms,
+  MEETING_ROOMS_EVENT,
+  SPAN,
+  STEP,
+  STORAGE_KEY,
+  dur,
+  hm,
+  pct,
+  type Booking,
+  type ParseResult,
+  type RoomDef,
+} from "@/lib/meetingRooms";
 
 /**
  * 회의실 예약 현황 (관리자 전용, 조회 전용).
- * 관리자가 공식 시스템에서 내려받은 "회의실 예약 현황" 엑셀(.xls/.xlsx)을 올리면,
- * 그 내용을 파싱해 18F 회의실 7개(M1·M2·M3 / A1~A4)의 하루 일정을 배치도·타임라인으로 보여준다.
- * 예약 생성/수정은 없다. 데이터는 브라우저 안에서만 쓰이고 저장하지 않는다.
+ * 관리자 페이지에서 올린 엑셀을 localStorage에서 읽어, 18F 회의실 7개의 하루 일정을
+ * 배치도·타임라인으로 보여준다. 업로드/삭제는 관리자 페이지에서 한다(여기선 표시만).
  *
- * 디자인: design_handoff_meeting_room_status (Wanted 토큰, 하이파이). 축만 09~24시로 조정.
+ * 디자인: design_handoff_meeting_room_status (Wanted 토큰). 축은 09~24시.
  */
-
-// ── 축(시간대) ─────────────────────────────────────────────
-const DS = 9; // 시작 09시
-const DE = 24; // 끝 24시
-const SPAN = DE - DS; // 15시간
-const STEP = 3; // 눈금 간격 → 09 12 15 18 21 24
-const ACCENT = "#0066FF";
-
-type Booking = {
-  roomId: string;
-  start: number; // 소수 시간
-  end: number;
-  title: string;
-  who: string; // 예약자 이름
-  people: string; // 예약인원
-};
-
-type RoomDef = { id: string; space: string; meta: string; row: "top" | "col" | "extra" };
-
-type ParseResult = {
-  fileName: string;
-  dateStr: string; // YYYY-MM-DD (주 날짜)
-  dateLabel: string; // 2026. 09. 04 (금)
-  monthDay: string; // 9월 4일
-  weekday: string; // 금
-  bookings: Booking[];
-  rooms: RoomDef[]; // 알려진 7개 + 엑셀에만 있는 추가 방
-  cancelledCount: number;
-  skippedCount: number;
-  multiDate: boolean;
-};
-
-// 18F 회의실(고정). 리스트/배치도 순서 = 이 순서.
-const KNOWN_ROOMS: RoomDef[] = [
-  { id: "M1", space: "SPACE M", meta: "6인실", row: "top" },
-  { id: "M2", space: "SPACE M", meta: "6인실", row: "top" },
-  { id: "M3", space: "SPACE M", meta: "6인실", row: "top" },
-  { id: "A4", space: "SPACE A", meta: "4인실", row: "col" },
-  { id: "A3", space: "SPACE A", meta: "4인실", row: "col" },
-  { id: "A2", space: "SPACE A", meta: "4인실", row: "col" },
-  { id: "A1", space: "SPACE A", meta: "4인실", row: "col" },
-];
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-
-function clamp(v: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, v));
-}
-function hm(t: number) {
-  const h = Math.floor(t);
-  const m = Math.round((t - h) * 60);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-function dur(t: number) {
-  const h = Math.floor(t);
-  const m = Math.round((t - h) * 60);
-  if (h && m) return `${h}시간 ${m}분`;
-  if (h) return `${h}시간`;
-  return `${m}분`;
-}
-function pct(t: number) {
-  return ((clamp(t, DS, DE) - DS) / SPAN) * 100;
-}
-
-/** "2026-09-04 20:00 - 23:29" → {date, start, end} (분 :29/:59는 30/정시로 보정) */
-function parseTimeCell(raw: string): { date: string; start: number; end: number } | null {
-  const m = raw.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})\s*[-~]\s*(\d{1,2}):(\d{2})/);
-  if (!m) return null;
-  const [, y, mo, d, sh, sm, eh0, em0] = m;
-  let eh = Number(eh0);
-  let em = Number(em0);
-  if (em === 29) em = 30;
-  else if (em === 59) {
-    eh += 1;
-    em = 0;
-  }
-  const start = Number(sh) + Number(sm) / 60;
-  const end = eh + em / 60;
-  if (!(end > start)) return null;
-  return { date: `${y}-${mo}-${d}`, start, end };
-}
-
-async function parseWorkbook(file: File): Promise<ParseResult> {
-  const XLSX = await import("xlsx");
-  const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  if (!ws) throw new Error("빈 파일이거나 시트를 찾을 수 없습니다.");
-  const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: "" });
-
-  const headerIdx = rows.findIndex(
-    (r) =>
-      r.some((c) => String(c).includes("예약시간")) && r.some((c) => String(c).includes("회의실")),
-  );
-  if (headerIdx < 0) {
-    throw new Error("형식을 알 수 없습니다. '회의실'·'예약시간' 열이 있는 예약 현황 엑셀인지 확인해 주세요.");
-  }
-  const header = rows[headerIdx].map((c) => String(c).trim());
-  const findIncl = (want: string) => header.findIndex((h) => h.includes(want));
-  const ci = {
-    room: header.findIndex((h) => h === "회의실"),
-    who: findIncl("이름"),
-    title: findIncl("예약명"),
-    people: findIncl("예약인원"),
-    time: findIncl("예약시간"),
-    status: findIncl("예약상태"),
-  };
-  if (ci.room < 0 || ci.time < 0) {
-    throw new Error("'회의실' 또는 '예약시간' 열을 찾지 못했습니다.");
-  }
-
-  const bookings: Booking[] = [];
-  const dates = new Map<string, number>();
-  let cancelledCount = 0;
-  let skippedCount = 0;
-
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const row = rows[i] ?? [];
-    const timeRaw = String(row[ci.time] ?? "").trim();
-    if (!timeRaw) continue;
-    const status = ci.status >= 0 ? String(row[ci.status] ?? "").trim() : "";
-    if (status.includes("취소")) {
-      cancelledCount++;
-      continue;
-    }
-    const t = parseTimeCell(timeRaw);
-    if (!t) {
-      skippedCount++;
-      continue;
-    }
-    dates.set(t.date, (dates.get(t.date) ?? 0) + 1);
-    const roomId =
-      String(row[ci.room] ?? "")
-        .replace(/^SPACE\s*/i, "")
-        .trim()
-        .toUpperCase() || "?";
-    bookings.push({
-      roomId,
-      start: t.start,
-      end: t.end,
-      title: (ci.title >= 0 ? String(row[ci.title] ?? "").trim() : "") || "(제목 없음)",
-      who: ci.who >= 0 ? String(row[ci.who] ?? "").trim() : "",
-      people: ci.people >= 0 ? String(row[ci.people] ?? "").trim() : "",
-    });
-  }
-
-  if (bookings.length === 0 && cancelledCount === 0) {
-    throw new Error("예약 데이터를 한 건도 읽지 못했습니다. 파일을 확인해 주세요.");
-  }
-
-  // 주 날짜 = 가장 많이 나온 날짜
-  let dateStr = "";
-  let max = -1;
-  for (const [d, n] of dates) {
-    if (n > max) {
-      max = n;
-      dateStr = d;
-    }
-  }
-  if (!dateStr) dateStr = new Date().toISOString().slice(0, 10);
-  const [yy, mm, dd] = dateStr.split("-").map(Number);
-  const dateObj = new Date(yy, mm - 1, dd);
-  const weekday = WEEKDAYS[dateObj.getDay()];
-  const dateLabel = `${yy}. ${String(mm).padStart(2, "0")}. ${String(dd).padStart(2, "0")} (${weekday})`;
-  const monthDay = `${mm}월 ${dd}일`;
-
-  // 엑셀에만 있는(배치도에 없는) 방은 목록 하단에 추가
-  const knownIds = new Set(KNOWN_ROOMS.map((r) => r.id));
-  const extraIds = [...new Set(bookings.map((b) => b.roomId))].filter((id) => !knownIds.has(id));
-  const rooms: RoomDef[] = [
-    ...KNOWN_ROOMS,
-    ...extraIds.map((id) => ({ id, space: "", meta: "", row: "extra" as const })),
-  ];
-
-  return {
-    fileName: file.name,
-    dateStr,
-    dateLabel,
-    monthDay,
-    weekday,
-    bookings,
-    rooms,
-    cancelledCount,
-    skippedCount,
-    multiDate: dates.size > 1,
-  };
-}
-
-// ── 컴포넌트 ─────────────────────────────────────────────
 export function MeetingRoomStatusPage() {
   const [data, setData] = useState<ParseResult | null>(null);
   const [selId, setSelId] = useState<string>("M2");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const fileRef = useRef<HTMLInputElement>(null);
+
+  // localStorage에서 로드(이동/새로고침해도 유지). 다른 탭 업로드/삭제도 반영.
+  useEffect(() => {
+    const reload = () => {
+      const stored = loadMeetingRooms();
+      const d = stored?.data ?? null;
+      setData(d);
+      if (d) {
+        const withBooking = d.rooms.find((r) => d.bookings.some((b) => b.roomId === r.id));
+        setSelId(withBooking?.id ?? "M2");
+      }
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY || e.key === null) reload();
+    };
+    queueMicrotask(reload); // 이펙트 본문 동기 setState 회피(React Compiler 규칙)
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(MEETING_ROOMS_EVENT, reload);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(MEETING_ROOMS_EVENT, reload);
+    };
+  }, []);
 
   // 현재 시각 20초마다 갱신(오늘 데이터일 때만 실제로 쓰임)
   useEffect(() => {
@@ -215,49 +62,15 @@ export function MeetingRoomStatusPage() {
     return () => clearInterval(t);
   }, []);
 
-  async function handleFile(file: File) {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await parseWorkbook(file);
-      setData(result);
-      // 기본 선택: 예약이 있는 첫 방, 없으면 M2
-      const withBooking = result.rooms.find((r) => result.bookings.some((b) => b.roomId === r.id));
-      setSelId(withBooking?.id ?? "M2");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "파일을 읽는 중 문제가 생겼습니다.");
-      setData(null);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) void handleFile(f);
-    e.target.value = ""; // 같은 파일 다시 선택 가능하게
-  }
-
-  // ── 업로드 화면 ──
+  // ── 비어 있으면 안내 ──
   if (!data) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 18, color: "#171719" }}>
         <PageHeader chips={null} />
         <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            const f = e.dataTransfer.files?.[0];
-            if (f) void handleFile(f);
-          }}
           style={{
             background: "#FFFFFF",
-            border: `1.5px dashed ${dragOver ? ACCENT : "#D6D8DD"}`,
+            border: "1px solid #E8E9EB",
             borderRadius: 16,
             padding: "56px 28px",
             display: "flex",
@@ -265,7 +78,6 @@ export function MeetingRoomStatusPage() {
             alignItems: "center",
             gap: 16,
             textAlign: "center",
-            transition: "border-color 160ms ease-out, background 160ms ease-out",
           }}
         >
           <div
@@ -279,75 +91,42 @@ export function MeetingRoomStatusPage() {
               justifyContent: "center",
             }}
           >
-            <FileSpreadsheet size={26} color={ACCENT} />
+            <CalendarClock size={26} color={ACCENT} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em" }}>
-              회의실 예약 현황 엑셀을 올려 주세요
+              아직 올라온 회의실 예약 현황이 없어요
             </div>
             <div style={{ fontSize: 13, fontWeight: 500, color: "#6B6E76", lineHeight: 1.6 }}>
-              공식 시스템에서 내려받은 예약 현황 파일(.xls / .xlsx)을 그대로 올리면 됩니다.
+              관리자 페이지의 <b style={{ color: "#46474C" }}>회의실 예약 현황</b> 칸에서 엑셀을 올리면
               <br />
-              <span style={{ color: "#8E9199" }}>
-                필요한 열: 회의실 · 이름 · 회의실 예약명 · 예약시간 · 예약상태
-              </span>
+              여기에 오늘 일정이 표시됩니다.
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
+          <Link
+            href="/admin"
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
               background: ACCENT,
               color: "#FFFFFF",
-              border: "none",
               borderRadius: 10,
               padding: "12px 20px",
               fontSize: 14,
               fontWeight: 700,
-              cursor: busy ? "default" : "pointer",
-              opacity: busy ? 0.6 : 1,
+              textDecoration: "none",
             }}
           >
             <Upload size={16} />
-            {busy ? "읽는 중…" : "엑셀 파일 선택"}
-          </button>
-          <div style={{ fontSize: 12, fontWeight: 500, color: "#A2A5AC" }}>
-            여기로 파일을 끌어다 놓아도 됩니다. 올린 파일은 저장하지 않고 화면에만 사용합니다.
-          </div>
-          {error && (
-            <div
-              style={{
-                marginTop: 4,
-                background: "#FFF0EB",
-                border: "1px solid #FBD6C9",
-                color: "#B33F1E",
-                borderRadius: 10,
-                padding: "10px 14px",
-                fontSize: 13,
-                fontWeight: 600,
-                maxWidth: 460,
-              }}
-            >
-              {error}
-            </div>
-          )}
+            관리자 페이지에서 올리기
+          </Link>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          onChange={onInputChange}
-          hidden
-        />
       </div>
     );
   }
 
-  // ── 로드 완료: 파생 상태 계산 ──
+  // ── 파생 상태 ──
   const now = new Date(nowMs);
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
     now.getDate(),
@@ -373,7 +152,6 @@ export function MeetingRoomStatusPage() {
     }
   };
 
-  // 헤더 칩
   const chips = (
     <>
       <Chip>18F 회의실</Chip>
@@ -416,7 +194,6 @@ export function MeetingRoomStatusPage() {
     : `예약 ${totalConfirmed}건`;
   const freeCountColor = isToday ? "#00A939" : "#6B6E76";
 
-  // 우측 헤드라인/요약
   const cur = isToday ? selBookings.find((b) => clock >= b.start && clock < b.end) : undefined;
   const next = isToday ? selBookings.find((b) => b.start > clock) : undefined;
   let headline: string;
@@ -445,62 +222,14 @@ export function MeetingRoomStatusPage() {
       ? hm(selBookings[0].start)
       : "-";
 
-  // 타임라인 눈금
   const hours: number[] = [];
   for (let h = DS; h <= DE; h += STEP) hours.push(h);
-
-  // 미니바 축 라벨(시작/중간/끝)
   const axisMid = Math.round((DS + DE) / 2);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18, color: "#171719" }}>
       <PageHeader chips={chips} />
 
-      {/* 툴바: 파일/보정 안내 + 다른 파일 */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-          fontSize: 12,
-          fontWeight: 600,
-          color: "#6B6E76",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <FileSpreadsheet size={14} color="#8E9199" />
-          <span style={{ color: "#46474C" }}>{data.fileName}</span>
-          <span style={{ color: "#C4C8CF" }}>·</span>
-          <span>예약완료 {totalConfirmed}건</span>
-          {data.cancelledCount > 0 && <span>· 취소 {data.cancelledCount}건 제외</span>}
-          {data.skippedCount > 0 && <span>· 형식오류 {data.skippedCount}건 제외</span>}
-          {data.multiDate && <span style={{ color: "#B33F1E" }}>· 여러 날짜 포함(주 날짜 기준 표시)</span>}
-        </div>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            background: "#FFFFFF",
-            border: "1px solid #E8E9EB",
-            borderRadius: 8,
-            padding: "7px 11px",
-            fontSize: 12,
-            fontWeight: 700,
-            color: "#46474C",
-            cursor: "pointer",
-          }}
-        >
-          <RefreshCw size={13} />
-          다른 파일 올리기
-        </button>
-      </div>
-
-      {/* 본문 2열 */}
       <div style={{ display: "flex", gap: 18, alignItems: "stretch", flexWrap: "wrap" }}>
         {/* 좌측 패널 */}
         <div
@@ -1033,14 +762,6 @@ export function MeetingRoomStatusPage() {
           </div>
         </div>
       </div>
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        onChange={onInputChange}
-        hidden
-      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useNow } from "@/lib/useNow";
 import { fmtDate, fmtMinutes, fmtTime, isSeatReturn, parseRange } from "@/lib/policy";
 import type { Occupancy, Seat, SeatHistoryRow, SeatView } from "@/lib/types";
 import { SeatLegend, SeatMap } from "./SeatMap";
+import { MeetingRoomUpload } from "./MeetingRoomUpload";
 
 type Props = { seats: Seat[]; userId: string };
 
@@ -677,6 +678,8 @@ export function AdminPage({ seats, userId }: Props) {
           })()}
         </aside>
       </div>
+
+      <MeetingRoomUpload />
 
       <section className={CARD}>
         <h2 className="mb-4 flex items-center gap-2 text-lg font-black tracking-tight text-neutral-900">
