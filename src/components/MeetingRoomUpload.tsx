@@ -1,56 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, FileSpreadsheet, Trash2, Upload } from "lucide-react";
-import {
-  clearMeetingRooms,
-  loadMeetingRooms,
-  MEETING_ROOMS_EVENT,
-  notifyMeetingRoomsChanged,
-  parseWorkbook,
-  saveMeetingRooms,
-  STORAGE_KEY,
-  type ParseResult,
-} from "@/lib/meetingRooms";
+import { parseWorkbook } from "@/lib/meetingRooms";
+import { clearSnapshot, saveSnapshot, useMeetingRoomSnapshot } from "@/lib/meetingRoomStore";
 
 const CARD = "rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-6";
 
+function fmtWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}. ${p(d.getMonth() + 1)}. ${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 /**
  * 관리자 페이지 안의 '회의실 예약 현황' 업로드 칸.
- * 엑셀을 올리면 파싱해 localStorage에 저장하고, '회의실 현황' 메뉴가 그걸 읽어 표시한다.
+ * 엑셀을 올리면 파싱해 서버(DB)에 저장하고, '회의실 현황' 메뉴가 그걸 읽어 표시한다.
+ * 여러 관리자가 같은 데이터를 공유한다.
  */
 export function MeetingRoomUpload() {
-  const [saved, setSaved] = useState<{ savedAt: number; data: ParseResult } | null>(null);
+  const { snapshot, loading, refetch } = useMeetingRoomSnapshot();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const reload = () => setSaved(loadMeetingRooms());
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY || e.key === null) reload();
-    };
-    queueMicrotask(reload); // 이펙트 본문 동기 setState 회피(React Compiler 규칙)
-    window.addEventListener("storage", onStorage);
-    window.addEventListener(MEETING_ROOMS_EVENT, reload);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener(MEETING_ROOMS_EVENT, reload);
-    };
-  }, []);
 
   async function handleFile(file: File) {
     setBusy(true);
     setError(null);
     try {
       const data = await parseWorkbook(file);
-      const savedAt = saveMeetingRooms(data);
-      notifyMeetingRoomsChanged();
-      setSaved({ savedAt, data });
+      await saveSnapshot(data);
+      refetch();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "파일을 읽는 중 문제가 생겼습니다.");
+      setError(e instanceof Error ? e.message : "파일을 올리는 중 문제가 생겼습니다.");
     } finally {
       setBusy(false);
     }
@@ -62,12 +47,18 @@ export function MeetingRoomUpload() {
     e.target.value = "";
   }
 
-  function onClear() {
-    if (!window.confirm("올린 회의실 예약 현황을 지울까요? '회의실 현황' 화면이 비워집니다.")) return;
-    clearMeetingRooms();
-    notifyMeetingRoomsChanged();
-    setSaved(null);
+  async function onClear() {
+    if (!window.confirm("올린 회의실 예약 현황을 지울까요? '회의실 현황' 화면이 모두에게 비워집니다.")) return;
+    setBusy(true);
     setError(null);
+    try {
+      await clearSnapshot();
+      refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "지우는 중 문제가 생겼습니다.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -79,25 +70,31 @@ export function MeetingRoomUpload() {
       <p className="mb-4 text-[13px] font-medium text-neutral-500">
         회의실 예약 시스템에서 내려받은 엑셀(.xls / .xlsx)을 올리면 좌측{" "}
         <b className="font-bold text-neutral-700">회의실 현황</b> 메뉴에 반영됩니다. 취소 건은 자동으로
-        빠지고, 파일은 이 브라우저에만 저장됩니다.
+        빠지고, <b className="font-bold text-neutral-700">모든 관리자</b>가 같은 데이터를 봅니다.
       </p>
 
-      {saved ? (
+      {loading && !snapshot ? (
+        <div className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
+      ) : snapshot ? (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-neutral-500 shadow-sm">
               <FileSpreadsheet className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-neutral-900">{saved.data.fileName}</p>
+              <p className="truncate text-sm font-black text-neutral-900">{snapshot.data.fileName}</p>
               <p className="mt-0.5 text-[12px] font-bold text-neutral-500">
-                {saved.data.dateLabel} · 예약완료 {saved.data.bookings.length}건
-                {saved.data.cancelledCount > 0 && ` · 취소 ${saved.data.cancelledCount}건 제외`}
-                {saved.data.skippedCount > 0 && ` · 형식오류 ${saved.data.skippedCount}건 제외`}
+                {snapshot.data.dateLabel} · 예약완료 {snapshot.data.bookings.length}건
+                {snapshot.data.cancelledCount > 0 && ` · 취소 ${snapshot.data.cancelledCount}건 제외`}
+                {snapshot.data.skippedCount > 0 && ` · 형식오류 ${snapshot.data.skippedCount}건 제외`}
               </p>
-              {saved.data.multiDate && (
+              <p className="mt-0.5 text-[12px] font-medium text-neutral-400">
+                {snapshot.uploadedByName ? `${snapshot.uploadedByName} · ` : ""}
+                {fmtWhen(snapshot.uploadedAt)} 업로드
+              </p>
+              {snapshot.data.multiDate && (
                 <p className="mt-0.5 text-[12px] font-bold text-amber-600">
-                  여러 날짜가 섞여 있어요. 주 날짜({saved.data.dateLabel}) 기준으로 표시됩니다.
+                  여러 날짜가 섞여 있어요. 주 날짜({snapshot.data.dateLabel}) 기준으로 표시됩니다.
                 </p>
               )}
             </div>
@@ -117,12 +114,13 @@ export function MeetingRoomUpload() {
               className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-bold text-neutral-600 transition-all hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-50"
             >
               <Upload className="h-4 w-4" />
-              {busy ? "읽는 중…" : "다시 올리기"}
+              {busy ? "처리 중…" : "다시 올리기"}
             </button>
             <button
               type="button"
               onClick={onClear}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-bold text-neutral-500 transition-all hover:border-red-500 hover:text-red-600"
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-bold text-neutral-500 transition-all hover:border-red-500 hover:text-red-600 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               지우기
@@ -160,7 +158,7 @@ export function MeetingRoomUpload() {
             className="inline-flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-black disabled:opacity-50"
           >
             <Upload className="h-4 w-4" />
-            {busy ? "읽는 중…" : "엑셀 파일 선택"}
+            {busy ? "처리 중…" : "엑셀 파일 선택"}
           </button>
         </div>
       )}

@@ -7,60 +7,45 @@ import {
   ACCENT,
   DE,
   DS,
-  loadMeetingRooms,
-  MEETING_ROOMS_EVENT,
   SPAN,
   STEP,
-  STORAGE_KEY,
   dur,
   hm,
   pct,
   type Booking,
-  type ParseResult,
   type RoomDef,
 } from "@/lib/meetingRooms";
+import { useMeetingRoomSnapshot } from "@/lib/meetingRoomStore";
 
 /**
  * 회의실 예약 현황 (관리자 전용, 조회 전용).
- * 관리자 페이지에서 올린 엑셀을 localStorage에서 읽어, 18F 회의실 7개의 하루 일정을
+ * 관리자 페이지에서 올린 엑셀을 서버(DB)에서 읽어, 18F 회의실 7개의 하루 일정을
  * 배치도·타임라인으로 보여준다. 업로드/삭제는 관리자 페이지에서 한다(여기선 표시만).
  *
  * 디자인: design_handoff_meeting_room_status (Wanted 토큰). 축은 09~24시.
  */
 export function MeetingRoomStatusPage() {
-  const [data, setData] = useState<ParseResult | null>(null);
-  const [selId, setSelId] = useState<string>("M2");
+  const { snapshot, loading } = useMeetingRoomSnapshot();
+  const data = snapshot?.data ?? null;
+  const [selId, setSelId] = useState<string>("");
   const [hover, setHover] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-
-  // localStorage에서 로드(이동/새로고침해도 유지). 다른 탭 업로드/삭제도 반영.
-  useEffect(() => {
-    const reload = () => {
-      const stored = loadMeetingRooms();
-      const d = stored?.data ?? null;
-      setData(d);
-      if (d) {
-        const withBooking = d.rooms.find((r) => d.bookings.some((b) => b.roomId === r.id));
-        setSelId(withBooking?.id ?? "M2");
-      }
-    };
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY || e.key === null) reload();
-    };
-    queueMicrotask(reload); // 이펙트 본문 동기 setState 회피(React Compiler 규칙)
-    window.addEventListener("storage", onStorage);
-    window.addEventListener(MEETING_ROOMS_EVENT, reload);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener(MEETING_ROOMS_EVENT, reload);
-    };
-  }, []);
 
   // 현재 시각 20초마다 갱신(오늘 데이터일 때만 실제로 쓰임)
   useEffect(() => {
     const t = setInterval(() => setNowMs(Date.now()), 20000);
     return () => clearInterval(t);
   }, []);
+
+  // ── 불러오는 중 ──
+  if (loading && !data) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, color: "#171719" }}>
+        <PageHeader chips={null} />
+        <div style={{ height: 260, background: "#FFFFFF", border: "1px solid #E8E9EB", borderRadius: 16 }} />
+      </div>
+    );
+  }
 
   // ── 비어 있으면 안내 ──
   if (!data) {
@@ -140,7 +125,12 @@ export function MeetingRoomStatusPage() {
   const isPast = (b: Booking) => isToday && clock >= b.end;
   const inUseRoom = (roomId: string) => bookingsOf(roomId).some(isLive);
 
-  const sel = data.rooms.find((r) => r.id === selId) ?? data.rooms[0];
+  const firstWithBooking = data.rooms.find((r) => data.bookings.some((b) => b.roomId === r.id))?.id;
+  const selEff =
+    selId && data.rooms.some((r) => r.id === selId)
+      ? selId
+      : (firstWithBooking ?? data.rooms[0]?.id ?? "");
+  const sel = data.rooms.find((r) => r.id === selEff) ?? data.rooms[0];
   const selBookings = bookingsOf(sel.id);
   const totalConfirmed = data.bookings.length;
 

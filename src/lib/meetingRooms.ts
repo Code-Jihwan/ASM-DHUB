@@ -1,6 +1,5 @@
-// 회의실 예약 현황: 엑셀 파싱 + 타입/상수/포맷 + localStorage 저장(관리자 업로드 ↔ 조회 페이지 공유).
-// 관리자 페이지에서 업로드하면 여기에 저장하고, '회의실 현황' 페이지가 그걸 읽어 표시한다.
-// 데이터는 브라우저(관리자 기기) localStorage에만 둔다. 서버/DB에는 저장하지 않는다.
+// 회의실 예약 현황: 엑셀 파싱 + 타입/상수/포맷(순수 로직).
+// 저장/조회는 서버(DB)로 하며 그 부분은 meetingRoomStore.ts 가 담당한다.
 
 // ── 축(시간대) ─────────────────────────────────────────────
 export const DS = 9; // 시작 09시
@@ -190,46 +189,3 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
   };
 }
 
-// ── localStorage (관리자 기기 안에서만) ─────────────────────
-export const STORAGE_KEY = "dhub.meetingRooms.v1";
-
-export type StoredMeetingRooms = { savedAt: number; data: ParseResult };
-
-export function saveMeetingRooms(data: ParseResult): number {
-  const savedAt = Date.now();
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ savedAt, data }));
-  } catch {
-    // 저장 실패(용량/프라이빗 모드)해도 화면 표시는 계속된다.
-  }
-  return savedAt;
-}
-
-export function loadMeetingRooms(): StoredMeetingRooms | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredMeetingRooms;
-    if (!parsed?.data?.bookings) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function clearMeetingRooms() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // 무시
-  }
-}
-
-/** 업로드/삭제 시 같은 탭 다른 컴포넌트에도 알린다(다른 탭은 storage 이벤트가 처리). */
-export const MEETING_ROOMS_EVENT = "dhub-meeting-rooms-changed";
-export function notifyMeetingRoomsChanged() {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(MEETING_ROOMS_EVENT));
-  }
-}
