@@ -43,14 +43,23 @@ function Read-EnvFile($path) {
   return $h
 }
 
-$cfg = Read-EnvFile (Join-Path $HOME '.rooms-sync.env')
+# .rooms-sync.env 를 여러 위치에서 찾는다: ① 스크립트와 같은 폴더(예: C:\rooms-sync\) → ② 사용자 홈.
+# (홈에 옛날 파일이 있으면 그걸 읽어 엉뚱한 값으로 로그인하던 문제를 막는다.)
+$scriptDir = if ($PSScriptRoot) { $PSScriptRoot } elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $null }
+$envCandidates = @()
+if ($scriptDir) { $envCandidates += (Join-Path $scriptDir '.rooms-sync.env') }
+$envCandidates += (Join-Path $HOME '.rooms-sync.env')
+$envPath = $envCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($envPath) { Log "설정 파일 사용: $envPath" }
+else { Log ("설정 파일(.rooms-sync.env)을 못 찾음. 확인 위치: " + ($envCandidates -join ' | ')) }
+$cfg = if ($envPath) { Read-EnvFile $envPath } else { @{} }
 $id     = if ($cfg['SWM_ID']) { $cfg['SWM_ID'] } else { $env:SWM_ID }
 $pw     = if ($cfg['SWM_PW']) { $cfg['SWM_PW'] } else { $env:SWM_PW }
 $secret = if ($cfg['ROOMS_INGEST_SECRET']) { $cfg['ROOMS_INGEST_SECRET'] } else { $env:ROOMS_INGEST_SECRET }
 $ingest = if ($cfg['INGEST_URL']) { $cfg['INGEST_URL'] } elseif ($env:INGEST_URL) { $env:INGEST_URL } else { 'https://www.asm-dhub.fkii.space/api/rooms/ingest' }
 
-if (-not $id -or -not $pw) { Log 'SWM_ID / SWM_PW 가 필요합니다 (%USERPROFILE%\.rooms-sync.env)'; exit 1 }
-if (-not $secret) { Log 'ROOMS_INGEST_SECRET 가 필요합니다 (%USERPROFILE%\.rooms-sync.env)'; exit 1 }
+if (-not $id -or -not $pw) { Log 'SWM_ID / SWM_PW 가 필요합니다 (.rooms-sync.env: 스크립트 폴더 또는 사용자 홈)'; exit 1 }
+if (-not $secret) { Log 'ROOMS_INGEST_SECRET 가 필요합니다 (.rooms-sync.env: 스크립트 폴더 또는 사용자 홈)'; exit 1 }
 
 $base       = 'https://www.swmaestro.ai/busan/bos'
 $loginPage  = "$base/member/admin/forLogin.do"

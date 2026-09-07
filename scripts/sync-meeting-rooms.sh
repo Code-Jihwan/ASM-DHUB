@@ -15,8 +15,12 @@
 
 set -euo pipefail
 
-[ -f "$HOME/.rooms-sync.env" ] && . "$HOME/.rooms-sync.env"
-: "${SWM_ID:?SWM_ID 가 필요합니다 (~/.rooms-sync.env)}"
+# .rooms-sync.env 를 스크립트와 같은 폴더에서 먼저 찾고, 없으면 홈에서 찾는다.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.rooms-sync.env" ]; then . "$SCRIPT_DIR/.rooms-sync.env"; echo "설정 파일 사용: $SCRIPT_DIR/.rooms-sync.env"
+elif [ -f "$HOME/.rooms-sync.env" ]; then . "$HOME/.rooms-sync.env"; echo "설정 파일 사용: $HOME/.rooms-sync.env"
+fi
+: "${SWM_ID:?SWM_ID 가 필요합니다 (.rooms-sync.env: 스크립트 폴더 또는 홈)}"
 : "${SWM_PW:?SWM_PW 가 필요합니다 (~/.rooms-sync.env)}"
 : "${ROOMS_INGEST_SECRET:?ROOMS_INGEST_SECRET 가 필요합니다 (~/.rooms-sync.env)}"
 INGEST_URL="${INGEST_URL:-https://www.asm-dhub.fkii.space/api/rooms/ingest}"
