@@ -7,6 +7,7 @@ import {
   ACCENT,
   DE,
   DS,
+  KNOWN_ID_SET,
   KNOWN_ROOMS,
   SPAN,
   STEP,
@@ -120,30 +121,25 @@ export function MeetingRoomStatusPage() {
   const isToday = data.dateStr === todayStr;
   const clock = now.getHours() + now.getMinutes() / 60;
 
+  // 방 목록·순서는 저장된 스냅샷이 아니라 코드(KNOWN_ROOMS)를 기준으로 렌더 시점에 만든다.
+  // 그래야 순서/정원 변경이 재업로드 없이 바로 반영된다. 18F 외(SPACE S 등) 예약은 무시한다.
+  const rooms: RoomDef[] = [...KNOWN_ROOMS];
+  const bookings = data.bookings.filter((b) => KNOWN_ID_SET.has(b.roomId));
+
   const bookingsOf = (roomId: string) =>
-    data.bookings.filter((b) => b.roomId === roomId).sort((a, b) => a.start - b.start);
+    bookings.filter((b) => b.roomId === roomId).sort((a, b) => a.start - b.start);
   const isLive = (b: Booking) => isToday && clock >= b.start && clock < b.end;
   const isPast = (b: Booking) => isToday && clock >= b.end;
   const inUseRoom = (roomId: string) => bookingsOf(roomId).some(isLive);
 
-  // 방 목록·순서는 저장된 스냅샷이 아니라 코드(KNOWN_ROOMS)를 기준으로 렌더 시점에 만든다.
-  // 그래야 순서/정원 변경이 재업로드 없이 바로 반영된다. 스냅샷에만 있는 방은 뒤에 덧붙인다.
-  const extraIds = [...new Set(data.bookings.map((b) => b.roomId))].filter(
-    (id) => !KNOWN_ROOMS.some((r) => r.id === id),
-  );
-  const rooms: RoomDef[] = [
-    ...KNOWN_ROOMS,
-    ...extraIds.map((id) => ({ id, space: "", meta: "", row: "extra" as const })),
-  ];
-
-  const firstWithBooking = rooms.find((r) => data.bookings.some((b) => b.roomId === r.id))?.id;
+  const firstWithBooking = rooms.find((r) => bookings.some((b) => b.roomId === r.id))?.id;
   const selEff =
     selId && rooms.some((r) => r.id === selId)
       ? selId
       : (firstWithBooking ?? rooms[0]?.id ?? "");
   const sel = rooms.find((r) => r.id === selEff) ?? rooms[0];
   const selBookings = bookingsOf(sel.id);
-  const totalConfirmed = data.bookings.length;
+  const totalConfirmed = bookings.length;
 
   const select = (id: string) => setSelId(id);
   const onKeyActivate = (id: string) => (e: React.KeyboardEvent) => {

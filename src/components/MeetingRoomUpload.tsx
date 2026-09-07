@@ -87,6 +87,7 @@ export function MeetingRoomUpload() {
                 {snapshot.data.dateLabel} · 예약완료 {snapshot.data.bookings.length}건
                 {snapshot.data.cancelledCount > 0 && ` · 취소 ${snapshot.data.cancelledCount}건 제외`}
                 {snapshot.data.skippedCount > 0 && ` · 형식오류 ${snapshot.data.skippedCount}건 제외`}
+                {(snapshot.data.ignoredCount ?? 0) > 0 && ` · 18F 외 ${snapshot.data.ignoredCount}건 제외`}
               </p>
               <p className="mt-0.5 text-[12px] font-medium text-neutral-400">
                 {snapshot.uploadedByName ? `${snapshot.uploadedByName} · ` : ""}

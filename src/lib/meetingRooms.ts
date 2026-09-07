@@ -29,6 +29,7 @@ export type ParseResult = {
   rooms: RoomDef[]; // 알려진 7개 + 엑셀에만 있는 추가 방
   cancelledCount: number;
   skippedCount: number;
+  ignoredCount: number; // 18F 외(SPACE S 등) 회의실이라 제외한 건수
   multiDate: boolean;
 };
 
@@ -42,6 +43,8 @@ export const KNOWN_ROOMS: RoomDef[] = [
   { id: "A3", space: "SPACE A", meta: "4인실", row: "col" },
   { id: "A4", space: "SPACE A", meta: "4인실", row: "col" },
 ];
+/** 18F 회의실 id 집합. 엑셀에 이 외(예: SPACE S…) 회의실이 있어도 무시한다. */
+export const KNOWN_ID_SET = new Set(KNOWN_ROOMS.map((r) => r.id));
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // ── 포맷 helper ────────────────────────────────────────────
@@ -116,6 +119,7 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
   const dates = new Map<string, number>();
   let cancelledCount = 0;
   let skippedCount = 0;
+  let ignoredCount = 0;
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -131,12 +135,17 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
       skippedCount++;
       continue;
     }
-    dates.set(t.date, (dates.get(t.date) ?? 0) + 1);
     const roomId =
       String(row[ci.room] ?? "")
         .replace(/^SPACE\s*/i, "")
         .trim()
         .toUpperCase() || "?";
+    // 18F 회의실(M1~M3 / A1~A4)만. SPACE S 등 다른 층·공간은 무시한다.
+    if (!KNOWN_ID_SET.has(roomId)) {
+      ignoredCount++;
+      continue;
+    }
+    dates.set(t.date, (dates.get(t.date) ?? 0) + 1);
     bookings.push({
       roomId,
       start: t.start,
@@ -176,13 +185,8 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
   const dateLabel = `${yy}. ${String(mm).padStart(2, "0")}. ${String(dd).padStart(2, "0")} (${weekday})`;
   const monthDay = `${mm}월 ${dd}일`;
 
-  // 엑셀에만 있는(배치도에 없는) 방은 목록 하단에 추가
-  const knownIds = new Set(KNOWN_ROOMS.map((r) => r.id));
-  const extraIds = [...new Set(bookings.map((b) => b.roomId))].filter((id) => !knownIds.has(id));
-  const rooms: RoomDef[] = [
-    ...KNOWN_ROOMS,
-    ...extraIds.map((id) => ({ id, space: "", meta: "", row: "extra" as const })),
-  ];
+  // 회의실 목록/순서는 항상 18F 고정(KNOWN_ROOMS). 위에서 그 외 방은 이미 걸러졌다.
+  const rooms: RoomDef[] = [...KNOWN_ROOMS];
 
   return {
     fileName: file.name,
@@ -194,6 +198,7 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
     rooms,
     cancelledCount,
     skippedCount,
+    ignoredCount,
     multiDate: dates.size > 1,
   };
 }
