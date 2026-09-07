@@ -43,15 +43,19 @@ function Read-EnvFile($path) {
   return $h
 }
 
-# .rooms-sync.env 를 여러 위치에서 찾는다: ① 스크립트와 같은 폴더(예: C:\rooms-sync\) → ② 사용자 홈.
-# (홈에 옛날 파일이 있으면 그걸 읽어 엉뚱한 값으로 로그인하던 문제를 막는다.)
+# 설정 파일을 여러 위치·여러 이름으로 찾는다.
+# (윈도우는 점(.)으로 시작하는 파일을 만들기 까다로워, 점 없는 이름이나 .txt 가 붙는 실수가 잦다.)
 $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } elseif ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $null }
-$envCandidates = @()
-if ($scriptDir) { $envCandidates += (Join-Path $scriptDir '.rooms-sync.env') }
-$envCandidates += (Join-Path $HOME '.rooms-sync.env')
+$envDirs = @()
+if ($scriptDir) { $envDirs += $scriptDir }
+$envDirs += 'C:\rooms-sync'
+$envDirs += $HOME
+$envDirs = $envDirs | Where-Object { $_ } | Select-Object -Unique
+$envNames = @('.rooms-sync.env', 'rooms-sync.env', '.rooms-sync.env.txt', 'rooms-sync.env.txt')
+$envCandidates = foreach ($d in $envDirs) { foreach ($n in $envNames) { Join-Path $d $n } }
 $envPath = $envCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($envPath) { Log "설정 파일 사용: $envPath" }
-else { Log ("설정 파일(.rooms-sync.env)을 못 찾음. 확인 위치: " + ($envCandidates -join ' | ')) }
+else { Log ("설정 파일을 못 찾음. 아래 위치·이름 중 하나로 두세요:`n  " + ($envCandidates -join "`n  ")) }
 $cfg = if ($envPath) { Read-EnvFile $envPath } else { @{} }
 $id     = if ($cfg['SWM_ID']) { $cfg['SWM_ID'] } else { $env:SWM_ID }
 $pw     = if ($cfg['SWM_PW']) { $cfg['SWM_PW'] } else { $env:SWM_PW }
