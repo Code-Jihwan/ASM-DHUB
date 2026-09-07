@@ -787,8 +787,8 @@ function PageHeader({ chips }: { chips: React.ReactNode }) {
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>회의실 예약 현황</div>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "#8A8D94", letterSpacing: "-0.01em" }}>
-            멘토링 예약이 없는 회의실을 실시간으로 조회할 수 있습니다.
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#74777E", letterSpacing: "-0.01em" }}>
+            멘토링 예약이 없는 회의실을 바로 확인할 수 있습니다.
           </span>
         </div>
       </div>
