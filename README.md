@@ -194,16 +194,16 @@ select cron.schedule('cancel-stale-away', '* * * * *', $$ select cancel_stale_aw
 
 - **수신 엔드포인트** `POST /api/rooms/ingest` — `x-ingest-secret` 헤더(`ROOMS_INGEST_SECRET`)로 보호. 원본 엑셀을
   받아 서버에서 파싱(18F만·하루치만) 후 스냅샷을 `service_role`로 upsert 한다. 미들웨어는 이 경로만 세션에서 제외.
-- **동기화 스크립트** [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh) — SW마에스트로에서 '오늘' 엑셀을
-  받아 위 엔드포인트로 POST. `~/.rooms-sync.env`에 `SWM_COOKIE`(로그인 세션 쿠키)·`ROOMS_INGEST_SECRET`을 둔다.
-  스케줄러가 하루 5회 호출한다:
-  - macOS/Linux: [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh) + `crontab`
+- **동기화 스크립트** — 매 실행마다 SW마에스트로에 **자동 로그인**(아이디/비번) → 오늘 엑셀 다운로드 → 위 엔드포인트로
+  POST. 로그인해서 세션을 새로 받으므로 **쿠키 만료 걱정이 없다**(수동 갱신 불필요). 설정파일에 `SWM_ID`·`SWM_PW`·
+  `ROOMS_INGEST_SECRET`을 둔다. 스케줄러가 하루 5회 호출:
+  - macOS/Linux: [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh) + `crontab`, 설정 `~/.rooms-sync.env`(chmod 600)
     (`0 9,12,15,18,21 * * * .../sync-meeting-rooms.sh >> ~/rooms-sync.log 2>&1`)
-  - Windows: [`scripts/sync-meeting-rooms.ps1`](scripts/sync-meeting-rooms.ps1) + **작업 스케줄러**. 설정값은
-    `%USERPROFILE%\.rooms-sync.env`(SWM_COOKIE·ROOMS_INGEST_SECRET), 로그는 `%USERPROFILE%\rooms-sync.log`.
+  - Windows: [`scripts/sync-meeting-rooms.ps1`](scripts/sync-meeting-rooms.ps1) + **작업 스케줄러**, 설정 `%USERPROFILE%\.rooms-sync.env`,
+    로그 `%USERPROFILE%\rooms-sync.log`.
 - 그 PC가 해당 시각에 **켜져 있어야** 한다(절전 중이면 건너뜀).
-- ⚠️ **한계**: `SWM_COOKIE`는 로그인 세션이라 만료된다. 만료되면(세션 리다이렉트 HTML) 매직바이트 검사로 저장하지 않고
-  실패 로그를 남긴다 → 쿠키를 갱신해야 한다. **완전 무인**(쿠키 갱신도 불필요)은 소스의 **API/장기 토큰/정기 이메일**이 있어야 한다.
+- ⚠️ **주의**: 설정파일에 **관리자 비밀번호가 평문**으로 저장된다. 파일 권한을 잠그고(그 사용자만 읽기) 가능하면 권한 낮은
+  별도 계정을 쓴다. 로그인에 캡차/2단계 인증이 도입되면 자동 로그인은 동작하지 않는다(현재는 아이디/비번만).
 
 ### 9. 실행
 
