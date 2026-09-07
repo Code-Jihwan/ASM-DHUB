@@ -95,7 +95,7 @@ export function MeetingRoomUpload() {
               </p>
               {snapshot.data.multiDate && (
                 <p className="mt-0.5 text-[12px] font-bold text-amber-600">
-                  여러 날짜가 섞여 있어요. 주 날짜({snapshot.data.dateLabel}) 기준으로 표시됩니다.
+                  여러 날짜가 섞여 있어 주 날짜({snapshot.data.dateLabel})만 반영했습니다.
                 </p>
               )}
             </div>

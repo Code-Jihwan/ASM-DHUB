@@ -113,10 +113,13 @@ NEXT_PUBLIC_VAPID_PUBLIC_KEY=B...      # 공개키(브라우저 노출 OK)
 VAPID_PRIVATE_KEY=...                  # 서버 전용
 VAPID_SUBJECT=mailto:you@example.com   # 푸시 제공자에 밝히는 운영자 연락처
 PUSH_RUN_SECRET=...                    # /api/push/run 보호용 랜덤 시크릿
-SUPABASE_SERVICE_ROLE_KEY=...          # 서버 전용(발송 라우트에서만). 절대 NEXT_PUBLIC 금지
+SUPABASE_SERVICE_ROLE_KEY=...          # 서버 전용(발송·수신 라우트에서만). 절대 NEXT_PUBLIC 금지
+
+# 회의실 현황 자동 동기화를 켤 때만 (아래 8번 참고)
+ROOMS_INGEST_SECRET=...                # /api/rooms/ingest 보호용 랜덤 시크릿
 ```
 
-- `SUPABASE_SERVICE_ROLE_KEY`는 **서버 라우트(`/api/push/run`)에서만** 쓰며 RLS를 우회한다.
+- `SUPABASE_SERVICE_ROLE_KEY`는 **서버 라우트(`/api/push/run`, `/api/rooms/ingest`)에서만** 쓰며 RLS를 우회한다.
   브라우저로 새어나가면 RLS가 통째로 무력화되니 **절대 `NEXT_PUBLIC_`을 붙이거나 클라이언트로 내보내지 않는다.**
 - `CENTER_IPS`·`VAPID_PRIVATE_KEY`·`PUSH_RUN_SECRET`도 서버 전용(비공개). 배포(Vercel)에선
   환경 변수로 넣고 **저장 후 재배포**해야 반영된다. `NEXT_PUBLIC_*` 값은 빌드 시점에 심어지므로 특히 재배포 필수.
@@ -185,7 +188,19 @@ select cron.schedule('cancel-stale-away', '* * * * *', $$ select cancel_stale_aw
 - 회의실 목록·순서·정원은 저장본이 아니라 코드(`src/lib/meetingRooms.ts`의 `KNOWN_ROOMS`)를 렌더 시점 기준으로 쓴다 → 순서를 바꿔도 **재업로드 없이** 반영된다.
 - **연수생 전체 공개는 아직 아니다.** 공개하려면 읽기 정책 확대 + 페이지/사이드바 게이트 해제 + **예약자 이름·예약명 마스킹**이 필요하다(`0036` 주석 참고).
 
-### 8. 실행
+### 8. 회의실 현황 자동 동기화 (선택)
+
+관리자 수동 업로드 대신, 예약 시스템 엑셀을 주기적으로 받아 자동 갱신할 수 있다.
+
+- **수신 엔드포인트** `POST /api/rooms/ingest` — `x-ingest-secret` 헤더(`ROOMS_INGEST_SECRET`)로 보호. 원본 엑셀
+  바이트를 받아 서버에서 파싱(18F만) 후 스냅샷을 `service_role`로 upsert 한다. 미들웨어는 `/api/rooms`를 세션에서 제외.
+- **동기화 스크립트** [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh) — SW마에스트로에서 '오늘' 엑셀을
+  받아 위 엔드포인트로 POST. `~/.rooms-sync.env`에 `SWM_COOKIE`(로그인 세션 쿠키)·`ROOMS_INGEST_SECRET`을 둔다.
+  크론 예: `0 9,12,15,18,21 * * * .../scripts/sync-meeting-rooms.sh >> ~/rooms-sync.log 2>&1` (매일 5회).
+- ⚠️ **한계**: `SWM_COOKIE`는 로그인 세션이라 만료된다. 만료되면 스크립트가 매직바이트 검사로 실패하고 로그를 남기니
+  쿠키를 갱신해야 한다. 완전 무인이 필요하면 소스의 **API/정기 이메일 export**가 있어야 한다.
+
+### 9. 실행
 
 ```bash
 npm install

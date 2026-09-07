@@ -85,7 +85,7 @@ function parseTimeCell(raw: string): { date: string; start: number; end: number 
   return { date: `${y}-${mo}-${d}`, start, end };
 }
 
-/** 업로드된 엑셀(.xls/.xlsx)을 파싱한다. xlsx는 무거워서 호출 시점에만 동적 로드. */
+/** 업로드된 엑셀(.xls/.xlsx)을 파싱한다(브라우저). xlsx는 무거워서 호출 시점에만 동적 로드. */
 export async function parseWorkbook(file: File): Promise<ParseResult> {
   const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
@@ -93,7 +93,14 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
   const ws = wb.Sheets[wb.SheetNames[0]];
   if (!ws) throw new Error("빈 파일이거나 시트를 찾을 수 없습니다.");
   const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: "" });
+  return parseRows(rows, file.name);
+}
 
+/**
+ * sheet_to_json(header:1) 로 얻은 행 배열을 파싱한다.
+ * 엑셀 읽기(File/Buffer)와 분리해 브라우저·서버(수신 엔드포인트) 양쪽에서 재사용한다.
+ */
+export function parseRows(rows: string[][], fileName: string): ParseResult {
   const headerIdx = rows.findIndex(
     (r) =>
       r.some((c) => String(c).includes("예약시간")) && r.some((c) => String(c).includes("회의실")),
@@ -115,7 +122,7 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
     throw new Error("'회의실' 또는 '예약시간' 열을 찾지 못했습니다.");
   }
 
-  const bookings: Booking[] = [];
+  const collected: { date: string; booking: Booking }[] = [];
   const dates = new Map<string, number>();
   let cancelledCount = 0;
   let skippedCount = 0;
@@ -146,13 +153,16 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
       continue;
     }
     dates.set(t.date, (dates.get(t.date) ?? 0) + 1);
-    bookings.push({
-      roomId,
-      start: t.start,
-      end: t.end,
-      title: (ci.title >= 0 ? String(row[ci.title] ?? "").trim() : "") || "(제목 없음)",
-      who: ci.who >= 0 ? String(row[ci.who] ?? "").trim() : "",
-      people: ci.people >= 0 ? String(row[ci.people] ?? "").trim() : "",
+    collected.push({
+      date: t.date,
+      booking: {
+        roomId,
+        start: t.start,
+        end: t.end,
+        title: (ci.title >= 0 ? String(row[ci.title] ?? "").trim() : "") || "(제목 없음)",
+        who: ci.who >= 0 ? String(row[ci.who] ?? "").trim() : "",
+        people: ci.people >= 0 ? String(row[ci.people] ?? "").trim() : "",
+      },
     });
   }
 
@@ -169,7 +179,7 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
     }
   }
   if (!dateStr) {
-    const fromName = file.name.match(/(\d{4})[-.]?(\d{2})[-.]?(\d{2})/);
+    const fromName = fileName.match(/(\d{4})[-.]?(\d{2})[-.]?(\d{2})/);
     if (fromName) {
       dateStr = `${fromName[1]}-${fromName[2]}-${fromName[3]}`;
     } else {
@@ -179,6 +189,9 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
       ).padStart(2, "0")}`;
     }
   }
+  // 스냅샷은 항상 하루치만 담는다. 여러 날짜가 섞여 들어와도 주 날짜 것만 남겨 단일 축 오염을 막는다.
+  const bookings = collected.filter((c) => c.date === dateStr).map((c) => c.booking);
+
   const [yy, mm, dd] = dateStr.split("-").map(Number);
   const dateObj = new Date(yy, mm - 1, dd);
   const weekday = WEEKDAYS[dateObj.getDay()];
@@ -189,7 +202,7 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
   const rooms: RoomDef[] = [...KNOWN_ROOMS];
 
   return {
-    fileName: file.name,
+    fileName,
     dateStr,
     dateLabel,
     monthDay,
