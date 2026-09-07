@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ⚠️ 이전(참고용) 버전 — 현재 사이트 로그인 흐름(toLogin.do → gofrm 후속 폼 → login.do 재제출,
+#    동적 ;jsessionid= URL)을 구현하지 않아 그대로는 로그인에 실패할 수 있다.
+#    운영·검증본은 Windows PowerShell 스크립트(sync-meeting-rooms.ps1)다. macOS/Linux에서 쓰려면 그 흐름을 포팅해야 한다.
+#
 # 회의실 예약 현황 자동 동기화 (macOS/Linux) — 자동 로그인 방식
 #   매 실행마다 SW마에스트로에 로그인 → 오늘 엑셀 다운로드 → 자리요 수신 엔드포인트로 POST.
 #   로그인해서 새 세션을 받으므로 쿠키 만료 걱정이 없다. 크론이 하루 5회 호출.

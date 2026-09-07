@@ -190,20 +190,42 @@ select cron.schedule('cancel-stale-away', '* * * * *', $$ select cancel_stale_aw
 
 ### 8. 회의실 현황 자동 동기화 (선택)
 
-관리자 수동 업로드 대신, PC(맥/윈도우 등)에서 예약 시스템 엑셀을 주기적으로 받아 자동 갱신할 수 있다.
+관리자 수동 업로드 대신, 상시 가동하는 PC에서 예약 시스템 엑셀을 주기적으로 받아 자동 갱신한다.
+**현재 운영 방식: 사내 상시가동 윈도우 PC + 작업 스케줄러로 하루 5회(09/12/15/18/21시) 실행.**
 
 - **수신 엔드포인트** `POST /api/rooms/ingest` — `x-ingest-secret` 헤더(`ROOMS_INGEST_SECRET`)로 보호. 원본 엑셀을
   받아 서버에서 파싱(18F만·하루치만) 후 스냅샷을 `service_role`로 upsert 한다. 미들웨어는 이 경로만 세션에서 제외.
-- **동기화 스크립트** — 매 실행마다 SW마에스트로에 **자동 로그인**(아이디/비번) → 오늘 엑셀 다운로드 → 위 엔드포인트로
-  POST. 로그인해서 세션을 새로 받으므로 **쿠키 만료 걱정이 없다**(수동 갱신 불필요). 설정파일에 `SWM_ID`·`SWM_PW`·
-  `ROOMS_INGEST_SECRET`을 둔다. 스케줄러가 하루 5회 호출:
-  - macOS/Linux: [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh) + `crontab`, 설정 `~/.rooms-sync.env`(chmod 600)
-    (`0 9,12,15,18,21 * * * .../sync-meeting-rooms.sh >> ~/rooms-sync.log 2>&1`)
-  - Windows: [`scripts/sync-meeting-rooms.ps1`](scripts/sync-meeting-rooms.ps1) + **작업 스케줄러**, 설정 `%USERPROFILE%\.rooms-sync.env`,
-    로그 `%USERPROFILE%\rooms-sync.log`.
-- 그 PC가 해당 시각에 **켜져 있어야** 한다(절전 중이면 건너뜀).
+- **동기화 스크립트** [`scripts/sync-meeting-rooms.ps1`](scripts/sync-meeting-rooms.ps1) (Windows PowerShell, 검증·운영본) —
+  매 실행마다 **새로 로그인**하므로 쿠키/세션 만료 문제가 원천적으로 없다. 로그인 흐름은 사이트 구조를 그대로 재현한다:
+  1. `forLogin.do`를 열어 세션 쿠키와 페이지에 박힌 **동적 `;jsessionid=` URL**을 받는다.
+  2. `checkStat2.json`으로 계정 잠금 여부를 **사전확인**한다(브라우저 AJAX와 동일).
+  3. `toLogin.do`에 로그인 폼을 제출하면 서버가 **해시된 비번이 든 후속 폼(`gofrm`)**을 돌려주는데, 브라우저가 이를
+     `login.do`로 자동 재제출한다 → 스크립트도 그 폼을 찾아 **동일하게 POST**해야 인증이 완료된다.
+  4. `list.do`(회의실 목록)에 진입해 세션에 모듈/사이트 컨텍스트를 세우고, 로그인 성공을 최종 확인한다.
+  5. 오늘자 `downloadExcel.uxls`를 받아 위 수신 엔드포인트로 POST한다.
+  - 로그인 실패 시, 민감정보(비번·서버 해시·`jsessionid`)를 가린 진단 HTML(`login-response-sanitized.html`)을 남긴다.
+- **설정 파일 `.rooms-sync.env`** — 스크립트와 **같은 폴더**를 먼저 찾고, 없으면 사용자 홈에서 찾는다. 로그는 스크립트 폴더의
+  `rooms-sync.log`. 내용(따옴표·콜론 없이 `키=값`):
+  ```
+  SWM_ID=관리자아이디
+  SWM_PW=관리자비밀번호
+  ROOMS_INGEST_SECRET=자리요 ROOMS_INGEST_SECRET 과 동일 값
+  # INGEST_URL=https://www.asm-dhub.fkii.space/api/rooms/ingest   (선택, 기본값 있음)
+  ```
+- **설치·스케줄 등록 예** (스크립트와 env를 `C:\rooms-sync\`에 두고):
+  ```powershell
+  $cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -File C:\rooms-sync\sync-meeting-rooms.ps1'
+  foreach ($t in '09:00','12:00','15:00','18:00','21:00') {
+    schtasks /Create /F /TN "RoomsSync-$($t.Replace(':',''))" /TR $cmd /SC DAILY /ST $t
+  }
+  ```
+- **실행 조건**: PC가 켜져 있고 **윈도우 계정이 로그온된 상태**여야 한다(기본 설정). 창을 닫거나 화면을 잠가도(Win+L) 무관하지만,
+  **로그오프·절전/최대절전·재부팅 후 미로그인** 상태면 실행되지 않는다. 로그오프 상태에서도 돌리려면 작업 스케줄러에서
+  "사용자 로그온 여부와 상관없이 실행"을 켜야 하는데 윈도우 계정 비밀번호가 필요하다.
 - ⚠️ **주의**: 설정파일에 **관리자 비밀번호가 평문**으로 저장된다. 파일 권한을 잠그고(그 사용자만 읽기) 가능하면 권한 낮은
   별도 계정을 쓴다. 로그인에 캡차/2단계 인증이 도입되면 자동 로그인은 동작하지 않는다(현재는 아이디/비번만).
+- 참고: [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh)(macOS/Linux)는 위 `gofrm→login.do` 핸드오프·동적
+  세션 URL 처리가 없는 **이전 버전**이라 현재 사이트에선 그대로 동작하지 않을 수 있다. 운영·검증본은 PowerShell 스크립트다.
 
 ### 9. 실행
 
