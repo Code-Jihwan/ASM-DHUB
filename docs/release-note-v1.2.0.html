@@ -1,0 +1,213 @@
+<title>@@자리요 v1.2.0 릴리스 노트</title>
+<style>
+  :root{
+    --ink:#0f1e35; --ink-soft:#334660; --muted:#697c96; --faint:#9aa8bd;
+    --line:#e3e9f1; --line-soft:#eef2f7;
+    --accent:#1f5fdd; --accent-2:#0ea5e9; --accent-soft:#eef4ff;
+    --good:#0a8f5b; --good-soft:#e7f6ef;
+    --paper:#ffffff; --backdrop:#e9eef5;
+    --band:linear-gradient(120deg,#0e2f6b 0%,#173f86 48%,#1f5fdd 100%);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--backdrop);
+    color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:24px 16px 48px;
+    line-height:1.5;
+  }
+  .sheet{
+    width:210mm; min-height:297mm;
+    margin:0 auto; background:var(--paper);
+    box-shadow:0 12px 40px rgba(15,30,53,.18);
+    padding:15mm 15mm 12mm;
+    display:flex; flex-direction:column; gap:6mm;
+  }
+
+  /* ---- Header band ---- */
+  .head{
+    background:var(--band); color:#fff; border-radius:14px;
+    padding:7mm 8mm; display:flex; justify-content:space-between; align-items:flex-start; gap:8mm;
+    position:relative; overflow:hidden;
+  }
+  .head::after{content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;
+    background:radial-gradient(circle,rgba(14,165,233,.45),transparent 62%);}
+  .brand{display:flex;align-items:center;gap:11px;position:relative;z-index:1;}
+  .logo{width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;
+    font-weight:900;letter-spacing:.5px;font-size:15px;color:#eaf2ff;}
+  .eyebrow{font-size:10px;font-weight:800;letter-spacing:.22em;color:#bcd2ff;text-transform:uppercase;}
+  .title{font-size:26px;font-weight:900;letter-spacing:-.5px;margin:1px 0 0;line-height:1.05;text-wrap:balance;}
+  .subtitle{font-size:11.5px;color:#cfe0ff;margin-top:3px;font-weight:600;}
+  .meta{position:relative;z-index:1;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+  .ver{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#123;border-radius:999px;
+    padding:6px 13px;font-weight:900;font-size:13px;letter-spacing:.2px;}
+  .ver b{color:var(--accent);}
+  .meta .line{font-size:10.5px;color:#c9d9f5;font-weight:600;font-variant-numeric:tabular-nums;}
+
+  /* ---- Section scaffolding ---- */
+  h2{margin:0;font-size:12px;font-weight:900;letter-spacing:-.1px;color:var(--ink);
+    display:flex;align-items:center;gap:8px;}
+  h2::before{content:"";width:8px;height:8px;border-radius:3px;background:var(--accent);flex:none;}
+  .lead{font-size:11.5px;color:var(--ink-soft);margin:0;line-height:1.62;text-wrap:pretty;}
+  .lead b{color:var(--ink);font-weight:800;}
+
+  /* ---- Feature grid ---- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:4.2mm;}
+  .card{border:1px solid var(--line);border-radius:12px;padding:5mm 5.2mm;background:#fff;
+    display:flex;flex-direction:column;gap:2.6mm;}
+  .card h3{margin:0;font-size:11.5px;font-weight:800;color:var(--accent);letter-spacing:-.1px;
+    display:flex;align-items:center;gap:7px;}
+  .tag{font-size:8.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);
+    border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:auto;text-transform:uppercase;}
+  .tag.new{color:#fff;background:var(--accent);border-color:var(--accent);}
+  .tag.upd{color:var(--good);background:var(--good-soft);border-color:#bfe6d3;}
+  ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2.1mm;}
+  li{position:relative;padding-left:15px;font-size:10.5px;color:var(--ink-soft);line-height:1.42;}
+  li::before{content:"";position:absolute;left:1px;top:6px;width:5px;height:5px;border-radius:1.5px;
+    background:var(--accent-2);}
+  li b{color:var(--ink);font-weight:700;}
+
+  /* ---- Policy + info row ---- */
+  .cols{display:grid;grid-template-columns:1.28fr 1fr;gap:5mm;align-items:start;}
+  table{width:100%;border-collapse:collapse;margin-top:3mm;}
+  td{padding:2.1mm 2mm;border-top:1px solid var(--line-soft);font-size:10.5px;vertical-align:top;}
+  tr:first-child td{border-top:none;}
+  td.k{color:var(--muted);font-weight:700;width:38%;white-space:nowrap;}
+  td.v{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+  td.v em{font-style:normal;color:var(--accent);font-weight:800;}
+  .info{margin-top:3mm;display:flex;flex-direction:column;gap:2.4mm;}
+  .info .row{display:flex;gap:9px;font-size:10.5px;color:var(--ink-soft);line-height:1.4;}
+  .info .row span{color:var(--good);font-weight:900;flex:none;line-height:1.3;}
+  .note{background:var(--accent-soft);border:1px solid #dce8ff;border-radius:10px;padding:3.2mm 4mm;
+    font-size:9.8px;color:var(--ink-soft);line-height:1.5;margin-top:2mm;}
+  .note b{color:var(--accent);}
+
+  /* ---- Footer ---- */
+  .foot{margin-top:auto;border-top:1.5px solid var(--line);padding-top:4mm;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .foot .f-l{font-size:10px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;}
+  .foot .f-l b{color:var(--ink);font-weight:800;}
+  .foot .f-r{font-size:9.5px;color:var(--faint);font-weight:700;letter-spacing:.03em;}
+
+  .print-btn{position:fixed;right:20px;bottom:20px;z-index:20;background:var(--accent);color:#fff;
+    border:none;border-radius:999px;padding:12px 20px;font-size:13px;font-weight:800;cursor:pointer;
+    box-shadow:0 8px 22px rgba(31,95,221,.4);font-family:inherit;}
+  .print-btn:hover{background:#1a52c0;}
+  .print-btn:focus-visible{outline:3px solid #9dc0ff;outline-offset:2px;}
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .sheet{box-shadow:none;width:auto;min-height:auto;margin:0;padding:12mm 13mm;}
+    .print-btn{display:none;}
+    @page{size:A4;margin:0;}
+  }
+</style>
+
+<div class="sheet">
+  <header class="head">
+    <div class="brand">
+      <div class="logo">ASM</div>
+      <div>
+        <div class="eyebrow">Release Note</div>
+        <h1 class="title">@@자리요</h1>
+        <div class="subtitle">부산센터 D-HUB 좌석 · 회의실 예약 시스템</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="ver"><b>v1.2.0</b></span>
+      <span class="line">릴리스 2026. 09. 07</span>
+      <span class="line">www.asm-dhub.fkii.space</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>개요</h2>
+    <p class="lead" style="margin-top:3mm;">
+      v1.1.0에서 선보인 <b>회의실 현황 조회</b>를, 이번 버전에서 <b>담당자 손을 거치지 않고 자동으로 최신화</b>합니다.
+      상시 가동 PC가 예약 시스템에서 <b>하루 5회(09·12·15·18·21시)</b> 당일 예약 현황을 받아 자리요에 반영하며,
+      매 실행마다 새로 로그인해 <b>세션 만료 걱정이 없습니다</b>. 관리자 수동 업로드는 폴백으로 그대로 유지됩니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>이번 버전 주요 기능</h2>
+    <div class="grid" style="margin-top:3.5mm;">
+      <div class="card">
+        <h3>회의실 현황 자동 동기화 <span class="tag new">New</span></h3>
+        <ul>
+          <li>예약 시스템에서 <b>당일 예약 현황</b>을 자동 수집해 반영</li>
+          <li><b>하루 5회</b> 09·12·15·18·21시 — 하루 중 예약 추가·취소도 갱신</li>
+          <li>서버 공유 스냅샷이라 <b>관리자 누구나 최신 현황</b>을 봄</li>
+          <li>담당자 <b>수동 업로드 불필요</b> (필요 시 수동 업로드도 그대로 가능)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>안정적인 무인 로그인 <span class="tag new">New</span></h3>
+        <ul>
+          <li>매 실행마다 <b>새 세션으로 로그인</b> → 쿠키·세션 만료 문제 없음</li>
+          <li>사전확인 → 로그인 → 후속 폼 자동 제출까지 <b>실제 흐름 재현</b></li>
+          <li>내려받은 파일이 <b>정상 엑셀인지 검사</b> 후에만 반영</li>
+          <li>상시 가동 PC의 <b>작업 스케줄러</b>로 무인 실행</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>회의실 현황 조회 다듬기 <span class="tag upd">Upd</span></h3>
+        <ul>
+          <li>예약이 <b>0건인 날도 정상 표기</b>(빈 현황으로 갱신)</li>
+          <li>18F 외 회의실(<b>SPACE S·하이스퀘어·하이텐 등</b>) 자동 제외</li>
+          <li>배치도 + 09~24시 타임라인으로 <b>진행·예정·종료</b> 한눈에</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>수신 · 저장 안정성 <span class="tag upd">Upd</span></h3>
+        <ul>
+          <li>수신 엔드포인트를 <b>시크릿 헤더</b>로 보호</li>
+          <li>서버에서 <b>18F·하루치만</b> 파싱해 저장(오염·과대 방지)</li>
+          <li>스냅샷 기록은 <b>서버 전용 키</b>로만 — 조회는 관리자 전용</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>예약 규칙 (현행)</h2>
+      <table>
+        <tr><td class="k">예약 가능 시간</td><td class="v"><em>08:00 – 20:00</em> (그 외 시간은 자유 이용)</td></tr>
+        <tr><td class="k">예약 단위</td><td class="v">10분 · 1인 1건</td></tr>
+        <tr><td class="k">기본 이용</td><td class="v">최대 3시간 (프리셋 30·60·120·180분)</td></tr>
+        <tr><td class="k">연장</td><td class="v">종료 1시간 전부터 <em>3시간 1회</em> (최대 6시간)</td></tr>
+        <tr><td class="k">자리비움</td><td class="v">20분 초과 자동취소 · <em>예약당 2회</em>까지</td></tr>
+        <tr><td class="k">좌석 반납 / 취소</td><td class="v">10분 넘게 쓰면 <b>반납</b>, 이내면 <b>취소</b></td></tr>
+        <tr><td class="k">재예약 쿨다운</td><td class="v">같은 자리 <em>20분</em> (10분 이내 취소는 예외)</td></tr>
+      </table>
+    </div>
+    <div>
+      <h2>운영 메모</h2>
+      <div class="info">
+        <div class="row"><span>✓</span><div>회의실 현황은 <b>하루 5회 자동 동기화</b>로 최신 유지 — 수동 업로드는 폴백</div></div>
+        <div class="row"><span>✓</span><div>자동화는 <b>상시 가동 PC</b>에 의존 — 꺼짐·로그오프·절전 시 중단</div></div>
+        <div class="row"><span>✓</span><div>모든 예약 규칙·권한은 <b>서버(DB)에서 최종 검증</b></div></div>
+        <div class="row"><span>✓</span><div>센터 <b>Wi-Fi(공인 IP)</b> 접속 시에만 예약 — 서버단 강제</div></div>
+      </div>
+      <div class="note">
+        <b>회의실 현황 조회</b>는 현재 <b>관리자 전용</b>입니다. 연수생 전체 공개는 추후
+        예약자 이름·예약명 마스킹(공개용 뷰)을 거쳐 적용할 예정입니다.
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="f-l">운영 <b>부산센터 사무국</b> &nbsp;·&nbsp; 접속 <b>www.asm-dhub.fkii.space</b> &nbsp;·&nbsp; 릴리스 <b>2026.09.07</b></div>
+    <div class="f-r">ASM · 부산센터 D-HUB</div>
+  </footer>
+</div>
+
+<button class="print-btn" onclick="window.print()">인쇄 / PDF 저장</button>
+<script>
+  // 이미지 캡처(#shot)일 때는 인쇄 버튼을 감춘다. 인터랙티브로 열면 그대로 보인다.
+  if (location.hash === "#shot") document.querySelector(".print-btn")?.remove();
+</script>
