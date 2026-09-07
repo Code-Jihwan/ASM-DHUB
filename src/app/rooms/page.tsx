@@ -5,7 +5,7 @@ import { MeetingRoomStatusPage } from "@/components/MeetingRoomStatusPage";
 
 export const dynamic = "force-dynamic";
 
-/** 회의실 예약 현황 조회. 관리자만 볼 수 있다(엑셀 업로드 → 화면 표시, 저장 없음). */
+/** 회의실 예약 현황 조회. 로그인한 모든 사용자가 볼 수 있다(조회 전용). 업로드/삭제는 관리자 페이지에서. */
 export default async function Rooms() {
   const supabase = await createClient();
 
@@ -21,11 +21,11 @@ export default async function Rooms() {
     .maybeSingle();
 
   if (!profile) redirect("/onboarding");
-  if (!profile.is_admin) redirect("/");
 
+  const isAdmin = !!profile.is_admin;
   return (
-    <AppShell name={profile.name as string} isAdmin variant="scroll">
-      <MeetingRoomStatusPage />
+    <AppShell name={profile.name as string} isAdmin={isAdmin} variant="scroll">
+      <MeetingRoomStatusPage isAdmin={isAdmin} />
     </AppShell>
   );
 }

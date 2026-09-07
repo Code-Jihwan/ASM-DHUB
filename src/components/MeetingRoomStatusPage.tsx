@@ -20,13 +20,13 @@ import {
 import { useMeetingRoomSnapshot } from "@/lib/meetingRoomStore";
 
 /**
- * 회의실 예약 현황 (관리자 전용, 조회 전용).
+ * 회의실 예약 현황 (로그인한 모든 사용자 조회 가능, 조회 전용).
  * 관리자 페이지에서 올린 엑셀을 서버(DB)에서 읽어, 18F 회의실 7개의 하루 일정을
  * 배치도·타임라인으로 보여준다. 업로드/삭제는 관리자 페이지에서 한다(여기선 표시만).
  *
  * 디자인: design_handoff_meeting_room_status (Wanted 토큰). 축은 09~24시.
  */
-export function MeetingRoomStatusPage() {
+export function MeetingRoomStatusPage({ isAdmin = false }: { isAdmin?: boolean }) {
   const { snapshot, loading } = useMeetingRoomSnapshot();
   const data = snapshot?.data ?? null;
   const [selId, setSelId] = useState<string>("");
@@ -85,29 +85,37 @@ export function MeetingRoomStatusPage() {
               아직 올라온 회의실 예약 현황이 없어요
             </div>
             <div style={{ fontSize: 13, fontWeight: 500, color: "#6B6E76", lineHeight: 1.6 }}>
-              관리자 페이지의 <b style={{ color: "#46474C" }}>회의실 예약 현황</b> 칸에서 엑셀을 올리면
-              <br />
-              여기에 오늘 일정이 표시됩니다.
+              {isAdmin ? (
+                <>
+                  관리자 페이지의 <b style={{ color: "#46474C" }}>회의실 예약 현황</b> 칸에서 엑셀을 올리면
+                  <br />
+                  여기에 오늘 일정이 표시됩니다.
+                </>
+              ) : (
+                <>회의실 예약 현황이 등록되면 여기에 오늘 일정이 표시됩니다.</>
+              )}
             </div>
           </div>
-          <Link
-            href="/admin"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              background: ACCENT,
-              color: "#FFFFFF",
-              borderRadius: 10,
-              padding: "12px 20px",
-              fontSize: 14,
-              fontWeight: 700,
-              textDecoration: "none",
-            }}
-          >
-            <Upload size={16} />
-            관리자 페이지에서 올리기
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: ACCENT,
+                color: "#FFFFFF",
+                borderRadius: 10,
+                padding: "12px 20px",
+                fontSize: 14,
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              <Upload size={16} />
+              관리자 페이지에서 올리기
+            </Link>
+          )}
         </div>
       </div>
     );

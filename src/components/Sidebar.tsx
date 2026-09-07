@@ -21,10 +21,8 @@ function navItems(isAdmin: boolean): NavItem[] {
     { href: "/", label: "좌석 예약", icon: Map },
     { href: "/guide", label: "사용 방법", icon: BookOpen },
   ];
-  // 회의실 현황은 관리자 전용이라 '사용 방법' 바로 아래에 끼워 넣는다.
-  if (isAdmin) {
-    items.push({ href: "/rooms", label: "회의실 현황", icon: CalendarClock });
-  }
+  // 회의실 현황은 전체 공개(조회 전용) — '사용 방법' 바로 아래에 끼워 넣는다.
+  items.push({ href: "/rooms", label: "회의실 현황", icon: CalendarClock });
   items.push({ href: "/me", label: "마이페이지", icon: User });
   // 관리자가 아니면 눌러도 서버에서 되돌려보내므로 아예 감춘다.
   // 라벨을 짧게 둔다. 모바일 하단 탭은 폭을 균등 분할해서, 길면 좁은 화면에서 넘친다.
