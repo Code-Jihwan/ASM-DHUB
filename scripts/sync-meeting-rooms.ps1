@@ -82,6 +82,38 @@ $tmp = Join-Path $env:TEMP ("rooms-sync-" + [guid]::NewGuid().ToString('N') + ".
 # ①을 건너뛰면 서버가 세션 플래그를 못 세워 로그인 페이지 HTML 만 돌아온다(과거 실패 원인).
 $body = @{ siteName = 'bos'; loginFlag = ''; username = $id; password = $pw }
 $loginHdr = @{ 'Referer' = $loginPage; 'Origin' = $origin; 'X-Requested-With' = 'XMLHttpRequest' }
+
+# 로그인 POST 후 리다이렉트를 '수동으로' 따라가며 매 홉의 Set-Cookie 를 세션에 담는다.
+# (Windows PowerShell 5.1 은 자동 리다이렉트 시 302 응답이 주는 새 세션 쿠키를 놓칠 수 있어,
+#  로그인은 서버에서 성공했는데도 이후 요청이 '미로그인 세션'이 되는 문제가 있다.)
+function Send-Login($startUri, $postBody, $webSess, $referer) {
+  $cur = $startUri; $method = 'Post'; $hops = @()
+  for ($h = 0; $h -lt 10; $h++) {
+    $p = @{ Uri = $cur; WebSession = $webSess; UserAgent = $ua;
+            Headers = @{ 'Referer' = $referer; 'Origin' = $origin };
+            MaximumRedirection = 0; UseBasicParsing = $true; TimeoutSec = 60 }
+    if ($method -eq 'Post') { $p['Method'] = 'Post'; $p['Body'] = $postBody } else { $p['Method'] = 'Get' }
+    $status = 0; $loc = $null; $content = ''
+    try {
+      $r = Invoke-WebRequest @p
+      $status = [int]$r.StatusCode; $loc = $r.Headers['Location']; $content = "$($r.Content)"
+    } catch {
+      $er = $_.Exception.Response
+      if ($null -eq $er) { throw }
+      $status = [int]$er.StatusCode
+      try { $loc = $er.Headers['Location'] } catch {}
+      try { $sr = New-Object System.IO.StreamReader($er.GetResponseStream()); $content = $sr.ReadToEnd(); $sr.Close() } catch {}
+    }
+    $hops += "$status"
+    if ($status -ge 300 -and $status -lt 400 -and $loc) {
+      $cur = ([uri]::new([uri]$cur, [string]$loc)).AbsoluteUri
+      $referer = $cur; $method = 'Get'; continue
+    }
+    return [pscustomobject]@{ StatusCode = $status; Content = $content; Hops = ($hops -join '>') }
+  }
+  return [pscustomobject]@{ StatusCode = $status; Content = $content; Hops = ($hops -join '>') }
+}
+
 try {
   # 1) 로그인 페이지 GET → 세션 쿠키 확보(같은 세션으로 이어 감)
   Invoke-WebRequest -Uri $loginPage -SessionVariable sess -UserAgent $ua -UseBasicParsing -TimeoutSec 60 | Out-Null
@@ -94,15 +126,19 @@ try {
     Log ("! 로그인 사전확인 실패 — 계정 잠김/시도횟수 초과일 수 있음" + $(if($lock){" ($lock분 후 재시도)"}else{""}) + ". 응답: " + ($check.Content.Substring(0, [Math]::Min(160, $check.Content.Length))))
     exit 1
   }
-  # 3) 실제 로그인 POST (폼 전송). 응답/세션쿠키를 진단 로그로 남긴다(비번은 찍지 않음).
-  $login = Invoke-WebRequest -Uri $loginPost -Method Post -Body $body -WebSession $sess -UserAgent $ua `
-    -Headers @{ 'Referer' = $loginPage; 'Origin' = $origin } -UseBasicParsing -TimeoutSec 60
+  # 3) 실제 로그인 POST — 리다이렉트를 수동으로 따라가며 세션 쿠키를 확실히 담는다.
+  $before = ''
+  try { $before = (($sess.Cookies.GetCookies([uri]$loginPost)) | Where-Object { $_.Name -eq 'JSESSIONID' } | Select-Object -First 1).Value } catch {}
+  $login = Send-Login $loginPost $body $sess $loginPage
+  $after = ''
+  try { $after = (($sess.Cookies.GetCookies([uri]$loginPost)) | Where-Object { $_.Name -eq 'JSESSIONID' } | Select-Object -First 1).Value } catch {}
   $cookieNames = ''
   try { $cookieNames = (($sess.Cookies.GetCookies([uri]$loginPost)) | ForEach-Object { $_.Name }) -join ',' } catch {}
   $lb = "$($login.Content)"
   $loginState = if ($lb -match 'MiyaValidator|loginForm') { '로그인페이지(인증실패)' } `
                 elseif ($lb -match '관리자페이지|로그아웃|logout') { '관리자홈(성공추정)' } else { '기타' }
-  Log ("로그인 응답: HTTP $([int]$login.StatusCode) / 세션쿠키[$cookieNames] / ID$($id.Length)·PW$($pw.Length)자 / $loginState")
+  $ltitle = if ($lb -match '(?is)<title>\s*(.*?)\s*</title>') { $Matches[1] } else { '' }
+  Log ("로그인 응답: 홉[$($login.Hops)] / 세션쿠키[$cookieNames] / JSESSIONID변경=$([bool]($before -ne $after)) / ID$($id.Length)·PW$($pw.Length)자 / $loginState / 제목:$ltitle")
   # 4) 목록 페이지 진입(브라우저와 동일) + 로그인 상태 확인.
   #    목록이 로그인 페이지로 튕기면 → 로그인 실패(아이디/비번). 회의실 목록이 보이면 → 로그인 OK.
   #    (이 진입이 세션에 회의실예약 모듈/사이트 컨텍스트를 세운다. 없으면 다운로드가 서울로 튕김.)
