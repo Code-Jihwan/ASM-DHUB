@@ -25,6 +25,7 @@ BASE="https://www.swmaestro.ai/busan/bos"
 LOGIN_PAGE="$BASE/member/admin/forLogin.do"
 CHECK_URL="$BASE/member/admin/checkStat2.json"   # 로그인 전 계정 잠금/시도횟수 사전확인(브라우저가 먼저 호출)
 LOGIN_POST="$BASE/member/admin/toLogin.do"
+LIST_URL="$BASE/item/itemRent/list.do?menuNo=100240"   # 다운로드 전 목록 진입(세션에 모듈/사이트 컨텍스트 설정)
 TODAY="$(date +%F)"
 DL="$BASE/item/itemRent/downloadExcel.uxls?menuNo=100240&sdate=$TODAY&edate=$TODAY&searchStat=&searchCnd=1&searchWrd=&pageIndex=1"
 UA="Mozilla/5.0"
@@ -54,8 +55,11 @@ curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -L -e "$LOGIN_PAGE" \
   --data "siteName=bos" --data "loginFlag=" \
   --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
   "$LOGIN_POST" -o /dev/null
-# 4) 오늘 엑셀 다운로드(로그인된 세션으로)
-curl -fsSL --max-time 60 -A "$UA" -b "$JAR" "$DL" -o "$TMP"
+# 4) 목록 페이지 진입(브라우저와 동일). 건너뛰면 세션에 회의실예약 모듈/사이트 컨텍스트가
+#    안 잡혀 다운로드가 기본(서울) 페이지로 튕긴다 — 과거 "엑셀이 아님"의 진짜 원인.
+curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -e "$LOGIN_PAGE" "$LIST_URL" -o /dev/null
+# 5) 오늘 엑셀 다운로드(목록에서 엑셀 버튼 누른 것처럼 Referer 를 목록 페이지로)
+curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -e "$LIST_URL" "$DL" -o "$TMP"
 
 # 로그인 실패/세션 문제면 엑셀 대신 HTML 이 온다 → 매직바이트(504b/d0cf) 아니면 중단.
 SIG="$(od -An -tx1 -N2 "$TMP" | tr -d ' \n' | tr 'A-F' 'a-f')"

@@ -56,6 +56,7 @@ $base       = 'https://www.swmaestro.ai/busan/bos'
 $loginPage  = "$base/member/admin/forLogin.do"
 $checkUrl   = "$base/member/admin/checkStat2.json"   # 로그인 전 계정 잠금/시도횟수 사전확인(브라우저가 먼저 호출)
 $loginPost  = "$base/member/admin/toLogin.do"
+$listUrl    = "$base/item/itemRent/list.do?menuNo=100240"   # 다운로드 전 목록 진입(세션에 모듈/사이트 컨텍스트 설정)
 $today      = Get-Date -Format 'yyyy-MM-dd'
 $downloadUrl = "$base/item/itemRent/downloadExcel.uxls?menuNo=100240&sdate=$today&edate=$today&searchStat=&searchCnd=1&searchWrd=&pageIndex=1"
 $ua = 'Mozilla/5.0'
@@ -82,9 +83,14 @@ try {
   # 3) 실제 로그인 POST (폼 전송)
   Invoke-WebRequest -Uri $loginPost -Method Post -Body $body -WebSession $sess -UserAgent $ua `
     -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60 | Out-Null
-  # 4) 오늘 엑셀 다운로드(로그인된 세션으로)
+  # 4) 목록 페이지 진입(브라우저와 동일). 이걸 건너뛰면 세션에 회의실예약 모듈/사이트 컨텍스트가
+  #    안 잡혀 다운로드가 기본(서울) 페이지로 튕긴다 — 과거 "엑셀이 아님"의 진짜 원인.
+  Invoke-WebRequest -Uri $listUrl -WebSession $sess -UserAgent $ua `
+    -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60 | Out-Null
+  # 5) 오늘 엑셀 다운로드(목록에서 엑셀 버튼 누른 것처럼 Referer 를 목록 페이지로)
   Log "다운로드 ($today) ..."
-  Invoke-WebRequest -Uri $downloadUrl -WebSession $sess -UserAgent $ua -OutFile $tmp -UseBasicParsing -TimeoutSec 60
+  Invoke-WebRequest -Uri $downloadUrl -WebSession $sess -UserAgent $ua `
+    -Headers @{ 'Referer' = $listUrl } -OutFile $tmp -UseBasicParsing -TimeoutSec 60
 }
 catch {
   Log ("요청 실패: " + $_.Exception.Message); exit 1
