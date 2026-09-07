@@ -28,7 +28,8 @@ LOGIN_POST="$BASE/member/admin/toLogin.do"
 LIST_URL="$BASE/item/itemRent/list.do?menuNo=100240"   # 다운로드 전 목록 진입(세션에 모듈/사이트 컨텍스트 설정)
 TODAY="$(date +%F)"
 DL="$BASE/item/itemRent/downloadExcel.uxls?menuNo=100240&sdate=$TODAY&edate=$TODAY&searchStat=&searchCnd=1&searchWrd=&pageIndex=1"
-UA="Mozilla/5.0"
+UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+ORIGIN="https://www.swmaestro.ai"
 
 JAR="$(mktemp -t rooms-jar)"
 TMP="$(mktemp -t rooms-sync)"
@@ -42,7 +43,7 @@ echo "[$(date '+%F %T')] 로그인 → 다운로드 ($TODAY) …"
 curl -fsSL --max-time 60 -A "$UA" -c "$JAR" "$LOGIN_PAGE" -o /dev/null
 # 2) 사전확인(AJAX). 잠겨 있으면 success 가 아니라 lockMin 이 온다.
 CHECK="$(curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -e "$LOGIN_PAGE" \
-  -H 'X-Requested-With: XMLHttpRequest' \
+  -H "Origin: $ORIGIN" -H 'X-Requested-With: XMLHttpRequest' \
   --data "siteName=bos" --data "loginFlag=" \
   --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
   "$CHECK_URL")"
@@ -52,6 +53,7 @@ if ! printf '%s' "$CHECK" | grep -q 'success'; then
 fi
 # 3) 실제 로그인 POST(폼 전송)
 curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -L -e "$LOGIN_PAGE" \
+  -H "Origin: $ORIGIN" \
   --data "siteName=bos" --data "loginFlag=" \
   --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
   "$LOGIN_POST" -o /dev/null
