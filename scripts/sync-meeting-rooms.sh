@@ -23,6 +23,7 @@ INGEST_URL="${INGEST_URL:-https://www.asm-dhub.fkii.space/api/rooms/ingest}"
 
 BASE="https://www.swmaestro.ai/busan/bos"
 LOGIN_PAGE="$BASE/member/admin/forLogin.do"
+CHECK_URL="$BASE/member/admin/checkStat2.json"   # 로그인 전 계정 잠금/시도횟수 사전확인(브라우저가 먼저 호출)
 LOGIN_POST="$BASE/member/admin/toLogin.do"
 TODAY="$(date +%F)"
 DL="$BASE/item/itemRent/downloadExcel.uxls?menuNo=100240&sdate=$TODAY&edate=$TODAY&searchStat=&searchCnd=1&searchWrd=&pageIndex=1"
@@ -33,21 +34,38 @@ TMP="$(mktemp -t rooms-sync)"
 trap 'rm -f "$JAR" "$TMP"' EXIT
 
 echo "[$(date '+%F %T')] 로그인 → 다운로드 ($TODAY) …"
+# 로그인은 브라우저와 동일하게 2단계:
+#   ① checkStat2.json 사전확인(resultCode=success 여야 함) → ② 그때만 toLogin.do 폼 전송.
+#   ①을 건너뛰면 서버가 세션 플래그를 못 세워 로그인 페이지 HTML 만 돌아온다(과거 실패 원인).
 # 1) 로그인 페이지 GET(세션 쿠키 확보)
 curl -fsSL --max-time 60 -A "$UA" -c "$JAR" "$LOGIN_PAGE" -o /dev/null
-# 2) 로그인 POST(폼 전송). 실패해도 로그인 페이지가 돌아올 뿐 → 아래서 걸러짐.
+# 2) 사전확인(AJAX). 잠겨 있으면 success 가 아니라 lockMin 이 온다.
+CHECK="$(curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -e "$LOGIN_PAGE" \
+  -H 'X-Requested-With: XMLHttpRequest' \
+  --data "siteName=bos" --data "loginFlag=" \
+  --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
+  "$CHECK_URL")"
+if ! printf '%s' "$CHECK" | grep -q 'success'; then
+  echo "‼️  로그인 사전확인 실패 — 계정 잠김/시도횟수 초과일 수 있음. 응답: $(printf '%s' "$CHECK" | head -c 160)"
+  exit 1
+fi
+# 3) 실제 로그인 POST(폼 전송)
 curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -L -e "$LOGIN_PAGE" \
   --data "siteName=bos" --data "loginFlag=" \
   --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
   "$LOGIN_POST" -o /dev/null
-# 3) 오늘 엑셀 다운로드(로그인된 세션으로)
+# 4) 오늘 엑셀 다운로드(로그인된 세션으로)
 curl -fsSL --max-time 60 -A "$UA" -b "$JAR" "$DL" -o "$TMP"
 
 # 로그인 실패/세션 문제면 엑셀 대신 HTML 이 온다 → 매직바이트(504b/d0cf) 아니면 중단.
 SIG="$(od -An -tx1 -N2 "$TMP" | tr -d ' \n' | tr 'A-F' 'a-f')"
 if [ "$SIG" != "504b" ] && [ "$SIG" != "d0cf" ]; then
-  echo "‼️  엑셀이 아닙니다 — 로그인 실패(아이디/비번 확인) 또는 사이트 응답 이상."
-  echo "    응답 앞부분: $(head -c 160 "$TMP" | tr '\n' ' ')"
+  HEAD="$(head -c 600 "$TMP" | tr '\n' ' ')"
+  if printf '%s' "$HEAD" | grep -qE 'loginForm|MiyaValidator|forLogin|toLogin'; then
+    echo "‼️  로그인 세션이 아닙니다 — 아이디/비번 확인 또는 계정 잠김(로그인 페이지가 돌아옴)."
+  else
+    echo "‼️  엑셀이 아닙니다 — 로그인은 됐으나 다운로드 응답이 엑셀이 아님(권한/파라미터?). 응답: $(printf '%s' "$HEAD" | head -c 160)"
+  fi
   exit 1
 fi
 

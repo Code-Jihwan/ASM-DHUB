@@ -1,4 +1,4 @@
-# 회의실 예약 현황 자동 동기화 (Windows PowerShell) — 자동 로그인 방식
+﻿# 회의실 예약 현황 자동 동기화 (Windows PowerShell) — 자동 로그인 방식
 #   매 실행마다 SW마에스트로에 로그인 → 오늘 예약 현황 엑셀 다운로드 → 자리요 수신 엔드포인트로 POST.
 #   Windows 작업 스케줄러가 하루 5회(09/12/15/18/21시) 호출하는 용도.
 #   로그인해서 새 세션을 받으므로 쿠키 만료 걱정이 없다.
@@ -17,6 +17,8 @@
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# 콘솔에 한글이 깨지지 않도록 출력 인코딩을 UTF-8 로. (파일 자체는 UTF-8 BOM 으로 저장돼 있어야 5.1이 한글을 바르게 읽는다)
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 
 $LogFile = Join-Path $HOME 'rooms-sync.log'
 function Log($msg) {
@@ -52,20 +54,35 @@ if (-not $secret) { Log 'ROOMS_INGEST_SECRET 가 필요합니다 (%USERPROFILE%\
 
 $base       = 'https://www.swmaestro.ai/busan/bos'
 $loginPage  = "$base/member/admin/forLogin.do"
+$checkUrl   = "$base/member/admin/checkStat2.json"   # 로그인 전 계정 잠금/시도횟수 사전확인(브라우저가 먼저 호출)
 $loginPost  = "$base/member/admin/toLogin.do"
 $today      = Get-Date -Format 'yyyy-MM-dd'
 $downloadUrl = "$base/item/itemRent/downloadExcel.uxls?menuNo=100240&sdate=$today&edate=$today&searchStat=&searchCnd=1&searchWrd=&pageIndex=1"
 $ua = 'Mozilla/5.0'
 $tmp = Join-Path $env:TEMP ("rooms-sync-" + [guid]::NewGuid().ToString('N') + ".xls")
 
+# 로그인은 브라우저와 동일하게 2단계다:
+#   ① checkStat2.json 로 계정 잠금/시도횟수 사전확인(resultCode=success 여야 함)
+#   ② 그때만 toLogin.do 로 실제 로그인 폼 전송.
+# ①을 건너뛰면 서버가 세션 플래그를 못 세워 로그인 페이지 HTML 만 돌아온다(과거 실패 원인).
+$body = @{ siteName = 'bos'; loginFlag = ''; username = $id; password = $pw }
+$loginHdr = @{ 'Referer' = $loginPage; 'X-Requested-With' = 'XMLHttpRequest' }
 try {
   # 1) 로그인 페이지 GET → 세션 쿠키 확보(같은 세션으로 이어 감)
   Invoke-WebRequest -Uri $loginPage -SessionVariable sess -UserAgent $ua -UseBasicParsing -TimeoutSec 60 | Out-Null
-  # 2) 로그인 POST (폼 전송; 실패해도 로그인 페이지가 돌아올 뿐이라 아래 다운로드에서 걸러짐)
-  $body = @{ siteName = 'bos'; loginFlag = ''; username = $id; password = $pw }
+  # 2) 사전확인(AJAX). 잠겨 있으면 여기서 lockMin 분 후 재시도 안내가 온다.
+  $check = Invoke-WebRequest -Uri $checkUrl -Method Post -Body $body -WebSession $sess -UserAgent $ua `
+    -Headers $loginHdr -UseBasicParsing -TimeoutSec 60
+  if ($check.Content -notmatch 'success') {
+    $lock = ''
+    if ($check.Content -match '"lockMin"\s*:\s*"?([0-9]+)') { $lock = $Matches[1] }
+    Log ("! 로그인 사전확인 실패 — 계정 잠김/시도횟수 초과일 수 있음" + $(if($lock){" ($lock분 후 재시도)"}else{""}) + ". 응답: " + ($check.Content.Substring(0, [Math]::Min(160, $check.Content.Length))))
+    exit 1
+  }
+  # 3) 실제 로그인 POST (폼 전송)
   Invoke-WebRequest -Uri $loginPost -Method Post -Body $body -WebSession $sess -UserAgent $ua `
     -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60 | Out-Null
-  # 3) 오늘 엑셀 다운로드(로그인된 세션으로)
+  # 4) 오늘 엑셀 다운로드(로그인된 세션으로)
   Log "다운로드 ($today) ..."
   Invoke-WebRequest -Uri $downloadUrl -WebSession $sess -UserAgent $ua -OutFile $tmp -UseBasicParsing -TimeoutSec 60
 }
@@ -80,7 +97,15 @@ $isXls = ($bytes.Length -ge 2) -and (
   (($bytes[0] -eq 0xD0) -and ($bytes[1] -eq 0xCF))
 )
 if (-not $isXls) {
-  Log "! 엑셀이 아닙니다 — 로그인 실패(아이디/비번 확인) 또는 사이트 응답 이상."
+  # 응답 앞부분을 보고 로그인 문제인지 다운로드 문제인지 구분해 알려준다.
+  $head = ''
+  try { $head = [System.Text.Encoding]::UTF8.GetString($bytes, 0, [Math]::Min(600, $bytes.Length)) } catch {}
+  if ($head -match 'loginForm|MiyaValidator|forLogin|toLogin') {
+    Log "! 로그인 세션이 아닙니다 — 아이디/비번 확인 또는 계정 잠김(로그인 페이지가 돌아옴)."
+  } else {
+    $title = if ($head -match '(?is)<title>\s*(.*?)\s*</title>') { $Matches[1] } else { ($head -replace '\s+', ' ').Substring(0, [Math]::Min(160, ($head -replace '\s+',' ').Length)) }
+    Log ("! 엑셀이 아닙니다 — 로그인은 됐으나 다운로드 응답이 엑셀이 아님(권한/파라미터?). 응답: " + $title)
+  }
   Remove-Item $tmp -Force -ErrorAction SilentlyContinue
   exit 1
 }
