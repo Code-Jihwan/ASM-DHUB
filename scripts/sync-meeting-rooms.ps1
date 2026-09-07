@@ -142,16 +142,17 @@ try {
   # 4) 목록 페이지 진입(브라우저와 동일) + 로그인 상태 확인.
   #    목록이 로그인 페이지로 튕기면 → 로그인 실패(아이디/비번). 회의실 목록이 보이면 → 로그인 OK.
   #    (이 진입이 세션에 회의실예약 모듈/사이트 컨텍스트를 세운다. 없으면 다운로드가 서울로 튕김.)
-  $listResp = Invoke-WebRequest -Uri $listUrl -WebSession $sess -UserAgent $ua `
-    -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60
-  $lc = "$($listResp.Content)"
+  # Invoke-RestMethod 로 받는다: IWR 는 큰 HTML 을 파싱하다 "개체의 현재 상태..." 로 죽는 5.1 버그가 있다.
+  # (판별은 ASCII 마커로 한다 — 로그인페이지: loginForm/MiyaValidator/forLogin, 로그인된 목록: downloadExcel/itemRent/logout)
+  $lc = ''
+  try { $lc = "$(Invoke-RestMethod -Uri $listUrl -WebSession $sess -UserAgent $ua -Headers @{ 'Referer' = $loginPage } -TimeoutSec 60)" }
+  catch { $lc = "LISTERR:$($_.Exception.Message)" }
   if ($lc -match 'MiyaValidator|loginForm|forLogin\.do') {
     Log "! 로그인 실패 — 목록이 로그인 페이지로 튕겼습니다. .rooms-sync.env 의 SWM_ID/SWM_PW 가 브라우저에서 직접 로그인할 때와 똑같은지 확인하세요(오타/앞뒤 공백/다른 계정)."
     exit 1
   }
-  if ($lc -notmatch '회의실|예약|로그아웃|logout') {
-    $lt = if ($lc -match '(?is)<title>\s*(.*?)\s*</title>') { $Matches[1] } else { '(제목없음)' }
-    Log ("! 목록 진입이 예상과 다릅니다(로그인/사이트 컨텍스트 의심). 페이지: " + $lt)
+  if ($lc -notmatch 'downloadExcel|itemRent|logout') {
+    Log ("! 목록 진입이 예상과 다릅니다(로그인/사이트 컨텍스트 의심). 응답 앞부분: " + ($lc -replace '\s+',' ').Substring(0, [Math]::Min(160, ($lc -replace '\s+',' ').Length)))
   } else {
     Log "로그인·목록 진입 OK"
   }
