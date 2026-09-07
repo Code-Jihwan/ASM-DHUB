@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { parseRows } from "./meetingRooms";
 
 // 서버 전용: 엑셀 바이트를 파싱해 회의실 스냅샷을 갱신한다(service_role, RLS 우회).
-// /api/rooms/ingest(POST 수신)와 /api/rooms/cron(서버 fetch) 이 공유한다.
+// /api/rooms/ingest(POST 수신)가 사용한다.
 // 파싱 실패·크기 초과·DB 오류는 throw 하며, 호출 라우트가 상태코드로 매핑한다.
 
 export type IngestSummary = {

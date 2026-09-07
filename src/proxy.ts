@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // 크론(세션 없음)이 호출하는 라우트만 콕 집어 세션 인증에서 뺀다. 각자 자체 시크릿 헤더로 보호한다.
 // (프리픽스가 아니라 정확한 경로로 둔다 — /api/rooms 하위에 인증 없는 라우트가 실수로 열리지 않게.)
-const PUBLIC_PATHS = ["/login", "/auth", "/api/push", "/api/rooms/ingest", "/api/rooms/cron"];
+const PUBLIC_PATHS = ["/login", "/auth", "/api/push", "/api/rooms/ingest"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

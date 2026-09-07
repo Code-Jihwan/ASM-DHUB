@@ -115,11 +115,8 @@ VAPID_SUBJECT=mailto:you@example.com   # 푸시 제공자에 밝히는 운영자
 PUSH_RUN_SECRET=...                    # /api/push/run 보호용 랜덤 시크릿
 SUPABASE_SERVICE_ROLE_KEY=...          # 서버 전용(발송·수신 라우트에서만). 절대 NEXT_PUBLIC 금지
 
-# 회의실 현황 자동 동기화를 켤 때만 (아래 8번 참고)
+# 회의실 현황 자동 동기화(수신 엔드포인트)를 켤 때만 (아래 8번 참고)
 ROOMS_INGEST_SECRET=...                # /api/rooms/ingest(POST 수신) 보호용 랜덤 시크릿
-# Vercel Cron(맥 없이 서버가 직접 받기)을 쓸 때만:
-CRON_SECRET=...                        # Vercel Cron 인증(설정 시 Bearer 로 자동 전송)
-SWM_COOKIE=JSESSIONID=...; ...         # SW마에스트로 로그인 세션 쿠키(만료됨 — 주기적 갱신 필요)
 ```
 
 - `SUPABASE_SERVICE_ROLE_KEY`는 **서버 라우트(`/api/push/run`, `/api/rooms/ingest`)에서만** 쓰며 RLS를 우회한다.
@@ -193,22 +190,18 @@ select cron.schedule('cancel-stale-away', '* * * * *', $$ select cancel_stale_aw
 
 ### 8. 회의실 현황 자동 동기화 (선택)
 
-관리자 수동 업로드 대신, 예약 시스템 엑셀을 주기적으로 받아 자동 갱신할 수 있다.
-공통으로 **수신 엔드포인트** `POST /api/rooms/ingest`(`x-ingest-secret` = `ROOMS_INGEST_SECRET` 로 보호)가 원본
-엑셀을 받아 서버에서 파싱(18F만·하루치만) 후 스냅샷을 `service_role`로 upsert 한다. 미들웨어는 해당 경로만 세션에서 제외.
+관리자 수동 업로드 대신, PC(맥/윈도우 등)에서 예약 시스템 엑셀을 주기적으로 받아 자동 갱신할 수 있다.
 
-**방법 A — 맥에서 크론**([`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh))
-- SW마에스트로에서 '오늘' 엑셀을 받아 엔드포인트로 POST. `~/.rooms-sync.env`에 `SWM_COOKIE`·`ROOMS_INGEST_SECRET`.
-- `crontab`: `0 9,12,15,18,21 * * * .../scripts/sync-meeting-rooms.sh >> ~/rooms-sync.log 2>&1`
-- 맥이 그 시각에 켜져 있어야 한다.
-
-**방법 B — Vercel Cron(맥 불필요)** — `GET /api/rooms/cron` + [`vercel.json`](vercel.json)
-- Vercel Cron이 서버에서 직접 SW마에스트로를 받아 갱신한다. 스케줄 `0 0,3,6,9,12 * * *`(UTC) = 한국시간 09·12·15·18·21시.
-- Vercel 환경변수에 `SWM_COOKIE`, `CRON_SECRET`(설정 시 Vercel이 `Authorization: Bearer`로 자동 전송) 필요.
-- ⚠️ **Vercel 요금제**: Hobby는 크론이 하루 1회로 제한된다. 5회/일은 **Pro** 필요.
-
-⚠️ **공통 한계**: `SWM_COOKIE`는 로그인 세션이라 만료된다. 만료되면(세션 리다이렉트 HTML) 매직바이트 검사로 저장하지 않고
-실패로 남긴다 → 쿠키를 갱신해야 한다. **완전 무인**(쿠키 갱신도 불필요)은 소스의 **API/장기 토큰/정기 이메일 export**가 있어야 한다.
+- **수신 엔드포인트** `POST /api/rooms/ingest` — `x-ingest-secret` 헤더(`ROOMS_INGEST_SECRET`)로 보호. 원본 엑셀을
+  받아 서버에서 파싱(18F만·하루치만) 후 스냅샷을 `service_role`로 upsert 한다. 미들웨어는 이 경로만 세션에서 제외.
+- **동기화 스크립트** [`scripts/sync-meeting-rooms.sh`](scripts/sync-meeting-rooms.sh) — SW마에스트로에서 '오늘' 엑셀을
+  받아 위 엔드포인트로 POST. `~/.rooms-sync.env`에 `SWM_COOKIE`(로그인 세션 쿠키)·`ROOMS_INGEST_SECRET`을 둔다.
+  스케줄러가 하루 5회 호출한다:
+  - macOS/Linux: `crontab` → `0 9,12,15,18,21 * * * .../scripts/sync-meeting-rooms.sh >> ~/rooms-sync.log 2>&1`
+  - Windows: Git Bash/WSL로 같은 스크립트를 작업 스케줄러에 등록(또는 PowerShell 포팅).
+- 그 PC가 해당 시각에 **켜져 있어야** 한다(절전 중이면 건너뜀).
+- ⚠️ **한계**: `SWM_COOKIE`는 로그인 세션이라 만료된다. 만료되면(세션 리다이렉트 HTML) 매직바이트 검사로 저장하지 않고
+  실패 로그를 남긴다 → 쿠키를 갱신해야 한다. **완전 무인**(쿠키 갱신도 불필요)은 소스의 **API/장기 토큰/정기 이메일**이 있어야 한다.
 
 ### 9. 실행
 
