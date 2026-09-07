@@ -63,7 +63,8 @@ try {
   Invoke-WebRequest -Uri $loginPage -SessionVariable sess -UserAgent $ua -UseBasicParsing -TimeoutSec 60 | Out-Null
   # 2) 로그인 POST (폼 전송; 실패해도 로그인 페이지가 돌아올 뿐이라 아래 다운로드에서 걸러짐)
   $body = @{ siteName = 'bos'; loginFlag = ''; username = $id; password = $pw }
-  Invoke-WebRequest -Uri $loginPost -Method Post -Body $body -WebSession $sess -UserAgent $ua -UseBasicParsing -TimeoutSec 60 | Out-Null
+  Invoke-WebRequest -Uri $loginPost -Method Post -Body $body -WebSession $sess -UserAgent $ua `
+    -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60 | Out-Null
   # 3) 오늘 엑셀 다운로드(로그인된 세션으로)
   Log "다운로드 ($today) ..."
   Invoke-WebRequest -Uri $downloadUrl -WebSession $sess -UserAgent $ua -OutFile $tmp -UseBasicParsing -TimeoutSec 60

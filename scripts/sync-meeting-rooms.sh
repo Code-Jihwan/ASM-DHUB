@@ -36,7 +36,7 @@ echo "[$(date '+%F %T')] 로그인 → 다운로드 ($TODAY) …"
 # 1) 로그인 페이지 GET(세션 쿠키 확보)
 curl -fsSL --max-time 60 -A "$UA" -c "$JAR" "$LOGIN_PAGE" -o /dev/null
 # 2) 로그인 POST(폼 전송). 실패해도 로그인 페이지가 돌아올 뿐 → 아래서 걸러짐.
-curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -L \
+curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -L -e "$LOGIN_PAGE" \
   --data "siteName=bos" --data "loginFlag=" \
   --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
   "$LOGIN_POST" -o /dev/null
