@@ -765,7 +765,7 @@ export function MeetingRoomStatusPage() {
               letterSpacing: "0.01em",
             }}
           >
-            예약 현황 조회 전용 · 예약은 공식 회의실 예약 시스템에서 진행하세요
+            예약 현황 조회 전용
           </div>
         </div>
       </div>
