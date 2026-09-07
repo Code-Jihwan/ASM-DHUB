@@ -45,7 +45,7 @@ fi
 echo "[$(date '+%F %T')] 업로드 → $INGEST_URL"
 RESP="$(curl -fsS --max-time 60 -X POST "$INGEST_URL" \
   -H "x-ingest-secret: ${ROOMS_INGEST_SECRET}" \
-  -H "x-file-name: 회의실 예약 현황_${TODAY}.xls" \
+  -H "x-file-name: rooms_${TODAY}.xls" \
   -H "content-type: application/vnd.ms-excel" \
   --data-binary "@${TMP}")"
 echo "[$(date '+%F %T')] 완료: $RESP"
