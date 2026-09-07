@@ -83,10 +83,22 @@ try {
   # 3) 실제 로그인 POST (폼 전송)
   Invoke-WebRequest -Uri $loginPost -Method Post -Body $body -WebSession $sess -UserAgent $ua `
     -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60 | Out-Null
-  # 4) 목록 페이지 진입(브라우저와 동일). 이걸 건너뛰면 세션에 회의실예약 모듈/사이트 컨텍스트가
-  #    안 잡혀 다운로드가 기본(서울) 페이지로 튕긴다 — 과거 "엑셀이 아님"의 진짜 원인.
-  Invoke-WebRequest -Uri $listUrl -WebSession $sess -UserAgent $ua `
-    -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60 | Out-Null
+  # 4) 목록 페이지 진입(브라우저와 동일) + 로그인 상태 확인.
+  #    목록이 로그인 페이지로 튕기면 → 로그인 실패(아이디/비번). 회의실 목록이 보이면 → 로그인 OK.
+  #    (이 진입이 세션에 회의실예약 모듈/사이트 컨텍스트를 세운다. 없으면 다운로드가 서울로 튕김.)
+  $listResp = Invoke-WebRequest -Uri $listUrl -WebSession $sess -UserAgent $ua `
+    -Headers @{ 'Referer' = $loginPage } -UseBasicParsing -TimeoutSec 60
+  $lc = "$($listResp.Content)"
+  if ($lc -match 'MiyaValidator|loginForm|forLogin\.do') {
+    Log "! 로그인 실패 — 목록이 로그인 페이지로 튕겼습니다. .rooms-sync.env 의 SWM_ID/SWM_PW 가 브라우저에서 직접 로그인할 때와 똑같은지 확인하세요(오타/앞뒤 공백/다른 계정)."
+    exit 1
+  }
+  if ($lc -notmatch '회의실|예약|로그아웃|logout') {
+    $lt = if ($lc -match '(?is)<title>\s*(.*?)\s*</title>') { $Matches[1] } else { '(제목없음)' }
+    Log ("! 목록 진입이 예상과 다릅니다(로그인/사이트 컨텍스트 의심). 페이지: " + $lt)
+  } else {
+    Log "로그인·목록 진입 OK"
+  }
   # 5) 오늘 엑셀 다운로드(목록에서 엑셀 버튼 누른 것처럼 Referer 를 목록 페이지로)
   Log "다운로드 ($today) ..."
   Invoke-WebRequest -Uri $downloadUrl -WebSession $sess -UserAgent $ua `

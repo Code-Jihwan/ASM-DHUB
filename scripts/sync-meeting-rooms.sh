@@ -55,9 +55,17 @@ curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -L -e "$LOGIN_PAGE" \
   --data "siteName=bos" --data "loginFlag=" \
   --data-urlencode "username=$SWM_ID" --data-urlencode "password=$SWM_PW" \
   "$LOGIN_POST" -o /dev/null
-# 4) 목록 페이지 진입(브라우저와 동일). 건너뛰면 세션에 회의실예약 모듈/사이트 컨텍스트가
-#    안 잡혀 다운로드가 기본(서울) 페이지로 튕긴다 — 과거 "엑셀이 아님"의 진짜 원인.
-curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -e "$LOGIN_PAGE" "$LIST_URL" -o /dev/null
+# 4) 목록 페이지 진입(브라우저와 동일) + 로그인 상태 확인.
+#    목록이 로그인 페이지면 → 로그인 실패(아이디/비번). 회의실 목록이면 → 로그인 OK.
+#    (이 진입이 세션에 회의실예약 모듈/사이트 컨텍스트를 세운다. 없으면 다운로드가 서울로 튕김.)
+LIST_HTML="$(curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -c "$JAR" -e "$LOGIN_PAGE" "$LIST_URL")"
+if printf '%s' "$LIST_HTML" | grep -qE 'MiyaValidator|loginForm|forLogin\.do'; then
+  echo "‼️  로그인 실패 — 목록이 로그인 페이지로 튕김. ~/.rooms-sync.env 의 SWM_ID/SWM_PW 가 브라우저 로그인과 동일한지 확인(오타/공백/다른 계정)."
+  exit 1
+fi
+if ! printf '%s' "$LIST_HTML" | grep -qE '회의실|예약|로그아웃|logout'; then
+  echo "‼️  목록 진입이 예상과 다름(로그인/사이트 컨텍스트 의심). 앞부분: $(printf '%s' "$LIST_HTML" | tr '\n' ' ' | head -c 120)"
+fi
 # 5) 오늘 엑셀 다운로드(목록에서 엑셀 버튼 누른 것처럼 Referer 를 목록 페이지로)
 curl -fsSL --max-time 60 -A "$UA" -b "$JAR" -e "$LIST_URL" "$DL" -o "$TMP"
 
