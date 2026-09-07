@@ -147,11 +147,10 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
     });
   }
 
-  if (bookings.length === 0 && cancelledCount === 0) {
-    throw new Error("예약 데이터를 한 건도 읽지 못했습니다. 파일을 확인해 주세요.");
-  }
+  // 예약이 0건인 파일도 정상으로 본다(그날 예약이 아예 없을 수 있음).
+  // 형식(회의실·예약시간 열)은 위 헤더 검사에서 이미 확인했으므로 여기서 막지 않는다.
 
-  // 주 날짜 = 가장 많이 나온 날짜
+  // 주 날짜 = 예약에서 가장 많이 나온 날짜. 예약이 없으면 파일명(…YYYYMMDD…), 그것도 없으면 오늘.
   let dateStr = "";
   let max = -1;
   for (const [d, n] of dates) {
@@ -160,7 +159,17 @@ export async function parseWorkbook(file: File): Promise<ParseResult> {
       dateStr = d;
     }
   }
-  if (!dateStr) dateStr = new Date().toISOString().slice(0, 10);
+  if (!dateStr) {
+    const fromName = file.name.match(/(\d{4})[-.]?(\d{2})[-.]?(\d{2})/);
+    if (fromName) {
+      dateStr = `${fromName[1]}-${fromName[2]}-${fromName[3]}`;
+    } else {
+      const t = new Date();
+      dateStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(
+        t.getDate(),
+      ).padStart(2, "0")}`;
+    }
+  }
   const [yy, mm, dd] = dateStr.split("-").map(Number);
   const dateObj = new Date(yy, mm - 1, dd);
   const weekday = WEEKDAYS[dateObj.getDay()];
