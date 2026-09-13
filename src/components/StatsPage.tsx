@@ -288,7 +288,7 @@ function WeekdayChart({ data, avg }: { data: StatsWeekday[]; avg: number }) {
   const todayDow = jsDay === 0 ? 7 : jsDay; // JS 0=일 → dow 7
   // 행 구조: [오늘 배지 자리][요일][막대 영역]
   // 3열은 minmax(0,1fr): 그리드 항목의 min-width:auto 때문에 막대 영역이 카드 밖으로 넘치는 걸 막는다(모바일).
-  const row = "grid grid-cols-[2.25rem_1.25rem_minmax(0,1fr)] items-center gap-x-3";
+  const row = "grid grid-cols-[2.75rem_1.25rem_minmax(0,1fr)] items-center gap-x-3";
   return (
     <div className="min-w-0 space-y-3">
       {/* 평균 라벨 행 — 막대 영역과 같은 열 구조라 점선과 정확히 맞는다 */}
@@ -314,13 +314,15 @@ function WeekdayChart({ data, avg }: { data: StatsWeekday[]; avg: number }) {
           <div key={d.dow} className={row}>
             <span className="flex justify-end">
               {isToday && (
-                <span className="rounded-md bg-neutral-900 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                <span className="rounded-full bg-neutral-900 px-2 py-1 text-[11px] font-black leading-none tracking-tight text-white">
                   오늘
                 </span>
               )}
             </span>
             <span
-              className={`text-center text-[15px] ${isMax ? "font-black text-neutral-900" : "font-bold text-neutral-400"}`}
+              className={`text-center text-[15px] ${
+                isMax || isToday ? "font-black text-neutral-900" : "font-bold text-neutral-400"
+              }`}
             >
               {WEEKDAY_LABEL[d.dow]}
             </span>
