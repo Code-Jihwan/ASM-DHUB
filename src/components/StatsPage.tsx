@@ -326,7 +326,7 @@ function WeekdayChart({ data, avg }: { data: StatsWeekday[]; avg: number }) {
             </span>
             <div className="relative" title={`${WEEKDAY_LABEL[d.dow]}요일 · 평균 ${d.avg}명`}>
               <div
-                className={`flex h-12 min-w-[4rem] items-center justify-end rounded-2xl pr-4 text-[15px] font-black tabular-nums ${
+                className={`flex h-11 min-w-[4rem] items-center justify-end rounded-2xl pr-4 text-[15px] font-black tabular-nums ${
                   isMax ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-900"
                 }`}
                 style={{ width: `${w}%` }}
