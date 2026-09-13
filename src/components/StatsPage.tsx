@@ -243,41 +243,104 @@ function HourlyChart({ hourly, hasToday }: { hourly: StatsHour[]; hasToday: bool
   );
 }
 
-/* ── 요일별 이용 인원 (가로 막대) ─────────────────────────── */
+/* ── 요일별 이용 인원 (스탯 레일 + 가로 막대) ───────────────── */
 const WEEKDAY_LABEL = ["", "월", "화", "수", "목", "금", "토", "일"];
-function WeekdayChart({ data }: { data: StatsWeekday[] }) {
-  const max = Math.max(1, ...data.map((d) => d.avg)); // 0 나눗셈 방지
+
+/** 왼쪽 스탯 레일: 현재 이용 중 · 하루 평균 · 가장 붐비는/한산한 요일. 모바일은 2×2, md 이상은 세로 구분선. */
+function WeekdayStatRail({ data }: { data: Stats }) {
+  const wk = data.weekday ?? [];
+  const busiest = wk.length ? wk.reduce((a, b) => (b.avg > a.avg ? b : a)) : null;
+  const quietest = wk.length ? wk.reduce((a, b) => (b.avg < a.avg ? b : a)) : null;
+  const items: { label: string; dot?: boolean; value: string | number; unit?: string; sub?: string }[] = [
+    { label: "현재 이용 중", dot: true, value: data.current_users ?? 0, unit: "명" },
+    { label: "하루 평균", value: data.users_avg ?? 0, unit: "명" },
+    { label: "가장 붐비는 요일", value: busiest ? WEEKDAY_LABEL[busiest.dow] : "–", sub: busiest ? `${busiest.avg}명` : "" },
+    { label: "가장 한산한 요일", value: quietest ? WEEKDAY_LABEL[quietest.dow] : "–", sub: quietest ? `${quietest.avg}명` : "" },
+  ];
   return (
-    <div className="space-y-5">
-      {data.map((d) => {
-        const w = Math.round((d.avg / max) * 100);
-        const isMax = d.avg === max; // 가장 붐빈 요일만 검게 강조, 나머지는 옅은 회색
-        return (
-          <div key={d.dow} className="flex items-center gap-4">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-1 md:gap-y-0 md:divide-y md:divide-neutral-200">
+      {items.map((it) => (
+        <div key={it.label} className="md:py-4 md:first:pt-0 md:last:pb-0">
+          <p className="flex items-center gap-1.5 text-[12px] font-bold text-neutral-500">
+            {it.dot && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />}
+            {it.label}
+          </p>
+          <p className="mt-1 text-[28px] font-black leading-none tabular-nums text-neutral-900">
+            {it.value}
+            {it.unit && <span className="ml-1 text-[13px] font-bold text-neutral-500">{it.unit}</span>}
+            {it.sub && <span className="ml-1.5 text-[15px] font-bold text-neutral-500">{it.sub}</span>}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 오른쪽 가로 막대: 요일 라벨을 막대에 붙이고, 오늘 배지는 요일 왼쪽에. 막대 안 오른쪽 끝에 인원 표기,
+ * 가장 붐빈 요일만 검게. 하루 평균 위치에 세로 점선(행마다 같은 폭의 막대 영역에 그려 세로로 이어진다).
+ */
+function WeekdayChart({ data, avg }: { data: StatsWeekday[]; avg: number }) {
+  const max = Math.max(1, ...data.map((d) => d.avg)); // 0 나눗셈 방지
+  const avgPct = Math.min(100, Math.max(0, (avg / max) * 100));
+  const showAvg = avg > 0;
+  const jsDay = new Date().getDay();
+  const todayDow = jsDay === 0 ? 7 : jsDay; // JS 0=일 → dow 7
+  // 행 구조: [오늘 배지 자리][요일][막대 영역]
+  // 3열은 minmax(0,1fr): 그리드 항목의 min-width:auto 때문에 막대 영역이 카드 밖으로 넘치는 걸 막는다(모바일).
+  const row = "grid grid-cols-[2.25rem_1.25rem_minmax(0,1fr)] items-center gap-x-3";
+  return (
+    <div className="min-w-0 space-y-3">
+      {/* 평균 라벨 행 — 막대 영역과 같은 열 구조라 점선과 정확히 맞는다 */}
+      <div className={`${row} h-5`}>
+        <span />
+        <span />
+        <div className="relative h-full">
+          {showAvg && (
             <span
-              className={`w-5 shrink-0 text-center text-[13px] ${
-                isMax ? "font-black text-neutral-900" : "font-bold text-neutral-400"
-              }`}
+              className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-[12px] font-bold text-neutral-500"
+              style={{ left: `${avgPct}%` }}
+            >
+              평균 {avg}명
+            </span>
+          )}
+        </div>
+      </div>
+      {data.map((d) => {
+        const w = (d.avg / max) * 100;
+        const isMax = d.avg === max;
+        const isToday = d.dow === todayDow;
+        return (
+          <div key={d.dow} className={row}>
+            <span className="flex justify-end">
+              {isToday && (
+                <span className="rounded-md bg-neutral-900 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                  오늘
+                </span>
+              )}
+            </span>
+            <span
+              className={`text-center text-[15px] ${isMax ? "font-black text-neutral-900" : "font-bold text-neutral-400"}`}
             >
               {WEEKDAY_LABEL[d.dow]}
             </span>
-            <div
-              className="h-2.5 flex-1 rounded-full bg-neutral-100"
-              title={`${WEEKDAY_LABEL[d.dow]}요일 · 평균 ${d.avg}명`}
-            >
+            <div className="relative" title={`${WEEKDAY_LABEL[d.dow]}요일 · 평균 ${d.avg}명`}>
               <div
-                className={`h-full rounded-full ${isMax ? "bg-neutral-900" : "bg-neutral-300"}`}
-                style={{ width: `${Math.max(w, 2)}%` }}
-              />
+                className={`flex h-12 min-w-[4rem] items-center justify-end rounded-2xl pr-4 text-[15px] font-black tabular-nums ${
+                  isMax ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-900"
+                }`}
+                style={{ width: `${w}%` }}
+              >
+                {d.avg}명
+              </div>
+              {showAvg && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -inset-y-2 border-l border-dashed border-neutral-400/70"
+                  style={{ left: `${avgPct}%` }}
+                />
+              )}
             </div>
-            <span
-              className={`w-11 shrink-0 text-right text-[15px] tabular-nums ${
-                isMax ? "font-black text-neutral-900" : "font-bold text-neutral-400"
-              }`}
-            >
-              {d.avg}
-              <span className="ml-0.5 text-[11px] font-bold text-neutral-300">명</span>
-            </span>
           </div>
         );
       })}
@@ -462,37 +525,21 @@ export function StatsPage() {
           {/* 요일별 이용 인원 (마이그레이션 0030 적용 후에만 나타난다) */}
           {data.weekday && (
             <div className={`${CARD} mb-3 md:mb-6`}>
-              <h2 className="mb-4 text-[15px] font-black tracking-tight text-neutral-900">
-                요일별 이용 인원
-              </h2>
+              <h2 className="text-[15px] font-black tracking-tight text-neutral-900">요일별 이용 인원</h2>
+              <p className="mt-1 text-[13px] font-bold text-neutral-400">
+                이용이 있었던 {data.days}일 기준 · 요일별 하루 평균
+              </p>
 
-              <div className="mb-5 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
-                <div className="rounded-2xl bg-neutral-50 px-4 py-3">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-                    현재 이용 중
+              <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-[minmax(11rem,13rem)_minmax(0,1fr)] md:gap-10">
+                <WeekdayStatRail data={data} />
+                {(data.users_total ?? 0) === 0 ? (
+                  <p className="self-center py-8 text-center text-sm font-bold text-neutral-400">
+                    이 기간에 데이터가 없습니다.
                   </p>
-                  <p className="mt-0.5 text-[20px] font-black tabular-nums text-neutral-900">
-                    {data.current_users ?? 0}
-                    <span className="ml-0.5 text-[13px] font-bold text-neutral-500">명</span>
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 px-4 py-3">
-                  <p className="text-[11px] font-bold text-neutral-400">하루 평균</p>
-                  <p className="mt-0.5 text-[20px] font-black tabular-nums text-neutral-900">
-                    {data.users_avg ?? 0}
-                    <span className="ml-0.5 text-[13px] font-bold text-neutral-500">명</span>
-                  </p>
-                </div>
+                ) : (
+                  <WeekdayChart data={data.weekday} avg={data.users_avg ?? 0} />
+                )}
               </div>
-
-              {(data.users_total ?? 0) === 0 ? (
-                <p className="py-8 text-center text-sm font-bold text-neutral-400">
-                  이 기간에 데이터가 없습니다.
-                </p>
-              ) : (
-                <WeekdayChart data={data.weekday} />
-              )}
             </div>
           )}
 
